@@ -111,3 +111,6 @@ This repository demonstrates collaborative Git and GitHub workflows including:
 - Merge conflict resolution
 
 Each team member contributes to this shared README file through their own branch, simulating a real-world collaborative software development workflow.
+
+## Collaboration Update
+This section was updated after merging the first pull request to simulate a merge conflict scenario.
