@@ -1,13 +1,42 @@
 "use client";
 
-import { FileText, ChevronRight, X, LayoutGrid } from "lucide-react";
+import { useState, useEffect } from "react";
+import { FileText, X, LayoutGrid, Activity, Zap, ShieldCheck } from "lucide-react";
 
 export default function MoodleSidebar() {
-  const recentItems = [
+  const [role, setRole] = useState<'student' | 'instructor' | 'admin'>('student');
+
+  useEffect(() => {
+    const updateRole = () => {
+      const persona = localStorage.getItem('activePersona');
+      if (persona) {
+        try {
+          const parsed = JSON.parse(persona);
+          setRole(parsed.role || 'student');
+        } catch (e) {
+          console.error("Failed to parse persona", e);
+        }
+      }
+    };
+    updateRole();
+    window.addEventListener('personaChanged', updateRole);
+    return () => window.removeEventListener('personaChanged', updateRole);
+  }, []);
+
+  const studentItems = [
     { title: "Week 5 - Lab 5", code: "COMP 3328-GÖMÜLÜ SİSTEMLER", icon: <FileText className="text-blue-500" /> },
     { title: "Week 10 - Unit Tests with Cov...", code: "COMP 3304-YAZILIM MÜHENDİSLİĞİ", icon: <FileText className="text-pink-500" /> },
     { title: "Week 9 - Team Code Review", code: "COMP 3304-YAZILIM MÜHENDİSLİĞİ", icon: <FileText className="text-pink-500" /> }
   ];
+
+  const adminItems = [
+    { title: "Docker Host Reset", code: "SYSTEM SERVICE", icon: <Zap className="text-yellow-600" /> },
+    { title: "Unauthorized Login Attempt", code: "SECURITY LOG", icon: <ShieldCheck className="text-red-600" /> },
+    { title: "Database Backup Completed", code: "MAINTENANCE", icon: <Activity className="text-green-600" /> }
+  ];
+
+  const items = role === 'admin' ? adminItems : studentItems;
+  const sectionTitle = role === 'admin' ? "System Activity Log" : "Recently accessed items";
 
   return (
     <aside className="w-[320px] hidden xl:flex flex-col gap-6 p-6 border-l border-gray-200 bg-white min-h-screen">
@@ -19,10 +48,10 @@ export default function MoodleSidebar() {
       </div>
 
       <div className="space-y-4">
-        <h3 className="text-lg font-semibold text-gray-800">Recently accessed items</h3>
+        <h3 className="text-lg font-semibold text-gray-800">{sectionTitle}</h3>
         
         <div className="space-y-4">
-          {recentItems.map((item, index) => (
+          {items.map((item, index) => (
             <div key={index} className="flex gap-4 p-4 border border-gray-100 rounded-lg hover:border-blue-200 hover:shadow-sm transition-all cursor-pointer group">
               <div className="w-12 h-12 rounded bg-gray-50 flex items-center justify-center shrink-0">
                 {item.icon}
@@ -36,7 +65,7 @@ export default function MoodleSidebar() {
         </div>
 
         <button className="w-full py-2 px-4 text-sm font-medium text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
-          Show more items
+          Show all {role === 'admin' ? 'logs' : 'items'}
         </button>
       </div>
 

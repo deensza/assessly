@@ -27,7 +27,7 @@ class DevelopmentConfig(Config):
     DEBUG = True
     SQLALCHEMY_DATABASE_URI = os.environ.get(
         'DATABASE_URL',
-        'postgresql://postgres:postgres@localhost:5432/assessly'
+        'sqlite:///' + os.path.join(basedir, 'assessly.db')
     )
 
 

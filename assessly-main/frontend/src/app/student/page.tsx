@@ -1,108 +1,136 @@
 "use client";
 import { useState } from "react";
 import Editor from "@monaco-editor/react";
-import { Play, CheckCircle2, ChevronLeft, ChevronRight, FileCode2, Award } from "lucide-react";
+import { 
+  Play, 
+  CheckCircle2, 
+  ChevronLeft, 
+  ChevronRight, 
+  FileCode2, 
+  Award, 
+  Clock, 
+  Search, 
+  Filter, 
+  ArrowRight,
+  BookOpen,
+  AlertCircle
+} from "lucide-react";
 import Link from "next/link";
 
-export default function StudentWorkspace() {
-  const [code, setCode] = useState(`def merge_sort(arr):
-    # Base case
-    if len(arr) <= 1:
-        return arr
-        
-    mid = len(arr) // 2
-    left = merge_sort(arr[:mid])
-    right = merge_sort(arr[mid:])
-    
-    return merge(left, right)
+export default function StudentPortal() {
+  const [view, setView] = useState<'dashboard' | 'workspace'>('dashboard');
+  const [selectedAssignment, setSelectedAssignment] = useState<any>(null);
+  const [code, setCode] = useState("");
 
-def merge(left, right):
-    result = []
-    i = j = 0
-    # Your merging logic here...
-    return result
-`);
+  const assignments = [
+    {
+      id: 1,
+      title: "Merge Sort Optimization",
+      course: "COMP 3304 - Yazılım Mühendisliği",
+      dueDate: "15 Apr 2026",
+      status: "In Progress",
+      difficulty: "Medium",
+      initialCode: "def merge_sort(arr):\n    # Base case\n    if len(arr) <= 1:\n        return arr\n    # ...",
+      description: "Implement the Merge Sort algorithm in Python. Your function merge_sort(arr) should take an unsorted list of integers and return a new list sorted in ascending order."
+    },
+    {
+      id: 2,
+      title: "Linked List Deletion",
+      course: "COMP 3328 - Gömülü Sistemler",
+      dueDate: "18 Apr 2026",
+      status: "Not Started",
+      difficulty: "Easy",
+      initialCode: "class Node:\n    def __init__(self, data):\n        self.data = data\n        self.next = None\n\ndef delete_node(head, key):\n    # implementation here\n    pass",
+      description: "Given a singly linked list and a key, delete the first occurrence of the key in the linked list."
+    },
+    {
+      id: 3,
+      title: "Red-Black Tree Insertion",
+      course: "COMP 3304 - Yazılım Mühendisliği",
+      dueDate: "10 Apr 2026",
+      status: "Submitted",
+      grade: "92/100",
+      difficulty: "Hard",
+      initialCode: "",
+      description: "Implement the insertion logic for a Red-Black Tree maintaining all balancing properties."
+    }
+  ];
 
-  return (
-    <div className="flex h-[calc(100vh-60px)] bg-[#f4f7f9] text-[#333] flex-col overflow-hidden">
-      {/* Sub Header / Breadcrumbs */}
-      <div className="bg-white border-b border-gray-200 px-8 py-3 flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Link href="/dashboard" className="text-gray-400 hover:text-primary transition-colors">
-            <ChevronLeft className="w-5 h-5"/>
-          </Link>
-          <div className="flex flex-col">
-            <span className="font-bold text-gray-800">Merge Sort Optimization</span>
-            <div className="flex items-center gap-2 text-xs text-gray-500">
-               <span>Dashboard</span>
-               <ChevronRight size={12} />
-               <span>COMP 3304</span>
-               <ChevronRight size={12} />
-               <span className="text-primary font-medium">Assignment 1</span>
+  const handleOpenAssignment = (assignment: any) => {
+    setSelectedAssignment(assignment);
+    setCode(assignment.initialCode);
+    setView('workspace');
+  };
+
+  if (view === 'workspace' && selectedAssignment) {
+    return (
+      <div className="flex h-[calc(100vh-60px)] bg-[#f4f7f9] text-[#333] flex-col overflow-hidden">
+        {/* Workspace Header */}
+        <div className="bg-white border-b border-gray-200 px-8 py-3 flex items-center justify-between shadow-sm">
+          <div className="flex items-center gap-4">
+            <button onClick={() => setView('dashboard')} className="text-gray-400 hover:text-[#4a90e2] transition-colors p-2 hover:bg-gray-50 rounded-lg">
+              <ChevronLeft className="w-6 h-6"/>
+            </button>
+            <div className="flex flex-col">
+              <span className="font-bold text-gray-900">{selectedAssignment.title}</span>
+              <div className="flex items-center gap-2 text-[10px] text-gray-500 font-bold uppercase tracking-wider">
+                 <span>{selectedAssignment.course}</span>
+                 <ChevronRight size={10} />
+                 <span className="text-[#4a90e2]">Assignment Workspace</span>
+              </div>
             </div>
           </div>
-        </div>
-        <div className="flex items-center space-x-3">
-          <button className="px-4 py-2 bg-white border border-gray-300 rounded text-sm font-medium hover:bg-gray-50 transition-colors flex items-center shadow-sm">
-            <Play className="w-4 h-4 mr-2 text-primary"/> Run Tests
-          </button>
-          <button className="px-4 py-2 bg-primary hover:bg-[#357abd] text-white rounded text-sm font-medium transition-colors flex items-center shadow-md">
-            <CheckCircle2 className="w-4 h-4 mr-2"/> Submit Solution
-          </button>
-        </div>
-      </div>
-
-      {/* Main Workspace */}
-      <div className="flex flex-1 overflow-hidden">
-        
-        {/* Left Panel: Problem Description */}
-        <div className="w-1/3 min-w-[350px] bg-white p-8 overflow-y-auto border-r border-gray-200 shadow-inner">
-          <div className="flex items-center gap-3 mb-6 border-b border-gray-100 pb-4">
-            <div className="p-2 bg-blue-50 text-primary rounded">
-              <FileCode2 className="w-6 h-6"/>
-            </div>
-            <h2 className="text-xl font-bold text-gray-800">Problem Description</h2>
-          </div>
-
-          <div className="prose prose-slate prose-sm max-w-none text-gray-600 space-y-4">
-            <p>
-              Implement the Merge Sort algorithm in Python. Your function <code>merge_sort(arr)</code> should take an unsorted list of integers and return a new list sorted in ascending order.
-            </p>
-            <div className="bg-gray-50 border border-gray-200 p-5 rounded-lg border-l-4 border-l-primary">
-              <h4 className="font-bold text-gray-700 mb-2 text-xs uppercase tracking-wider">Example:</h4>
-              <p className="font-mono text-xs text-gray-500 bg-white p-2 border border-gray-100 rounded mb-2">Input: [38, 27, 43, 3, 9, 82, 10]</p>
-              <p className="font-mono text-xs text-primary bg-blue-50/50 p-2 border border-blue-100 rounded">Output: [3, 9, 10, 27, 38, 43, 82]</p>
-            </div>
-          </div>
-
-          <div className="mt-10 pt-6 border-t border-gray-100">
-            <h3 className="font-bold text-xs mb-4 flex items-center uppercase tracking-wider text-gray-400">
-              <Award className="w-4 h-4 mr-2"/> Evaluation Weights
-            </h3>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="bg-blue-50/30 p-3 rounded-lg border border-blue-100">
-                <p className="text-[10px] text-gray-400 font-bold uppercase">Correctness</p>
-                <p className="text-lg font-mono font-bold text-primary">40%</p>
-              </div>
-              <div className="bg-amber-50/30 p-3 rounded-lg border border-amber-100">
-                <p className="text-[10px] text-gray-400 font-bold uppercase">Plagiarism</p>
-                <p className="text-lg font-mono font-bold text-amber-600">20%</p>
-              </div>
-              <div className="bg-indigo-50/30 p-3 rounded-lg border border-indigo-100">
-                <p className="text-[10px] text-gray-400 font-bold uppercase">Structure</p>
-                <p className="text-lg font-mono font-bold text-indigo-600">20%</p>
-              </div>
-              <div className="bg-rose-50/30 p-3 rounded-lg border border-rose-100">
-                <p className="text-[10px] text-gray-400 font-bold uppercase">AI Probability</p>
-                <p className="text-lg font-mono font-bold text-rose-600">20%</p>
-              </div>
-            </div>
+          <div className="flex items-center space-x-3">
+            <button className="px-4 py-2 bg-white border border-gray-200 rounded-xl text-sm font-bold hover:bg-gray-50 transition-colors flex items-center shadow-sm text-gray-700">
+              <Play className="w-4 h-4 mr-2 text-[#4a90e2]"/> Run Tests
+            </button>
+            <button className="px-4 py-2 bg-[#4a90e2] hover:bg-[#357abd] text-white rounded-xl text-sm font-bold transition-colors flex items-center shadow-lg shadow-blue-500/20">
+              <CheckCircle2 className="w-4 h-4 mr-2"/> Submit Solution
+            </button>
           </div>
         </div>
 
-        {/* Right Panel: Editor */}
-        <div className="flex-1 flex flex-col bg-[#1e1e1e] border-l border-gray-800">
-          <div className="h-full w-full">
+        <div className="flex flex-1 overflow-hidden">
+          <div className="w-1/3 min-w-[380px] bg-white p-8 overflow-y-auto border-r border-gray-100 shadow-inner">
+            <div className="flex items-center gap-3 mb-8 border-b border-gray-50 pb-6">
+              <div className="p-3 bg-blue-50 text-[#4a90e2] rounded-2xl">
+                <FileCode2 className="w-6 h-6"/>
+              </div>
+              <h2 className="text-xl font-extrabold text-gray-900 tracking-tight">Instructions</h2>
+            </div>
+
+            <div className="prose prose-slate prose-sm max-w-none text-gray-600 space-y-4 leading-relaxed">
+              <p>{selectedAssignment.description}</p>
+              <div className="bg-blue-50/50 border border-blue-100/50 p-6 rounded-2xl mt-6">
+                <h4 className="font-bold text-[#4a90e2] mb-3 text-xs uppercase tracking-widest flex items-center gap-2">
+                   <AlertCircle size={14} /> Constraints:
+                </h4>
+                <ul className="text-xs space-y-2 list-disc pl-4 text-blue-800/70 italic font-medium">
+                  <li>Time complexity: O(n log n)</li>
+                  <li>Space complexity: O(n)</li>
+                  <li>In-place memory limits: 512MB</li>
+                </ul>
+              </div>
+            </div>
+
+            <div className="mt-12 pt-8 border-t border-gray-50">
+              <h3 className="font-bold text-xs mb-6 flex items-center uppercase tracking-widest text-gray-400">
+                <Award className="w-4 h-4 mr-2"/> Evaluation Weights
+              </h3>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="bg-gray-50 p-4 rounded-2xl border border-gray-100">
+                   <p className="text-[10px] text-gray-400 font-bold uppercase mb-1">Functional</p>
+                   <p className="text-xl font-bold text-gray-900">40%</p>
+                </div>
+                <div className="bg-gray-50 p-4 rounded-2xl border border-gray-100">
+                   <p className="text-[10px] text-gray-400 font-bold uppercase mb-1">Plagiarism</p>
+                   <p className="text-xl font-bold text-gray-900">20%</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex-1 flex flex-col bg-[#1e1e1e]">
             <Editor
               height="100%"
               defaultLanguage="python"
@@ -116,14 +144,89 @@ def merge(left, right):
                 padding: { top: 20 },
                 lineNumbers: "on",
                 roundedSelection: true,
-                scrollBeyondLastLine: false,
-                readOnly: false,
                 automaticLayout: true,
               }}
             />
           </div>
         </div>
+      </div>
+    );
+  }
 
+  return (
+    <div className="flex-1 bg-[#f4f7f9] p-8 md:p-12 overflow-y-auto">
+      <div className="max-w-6xl mx-auto">
+        {/* Dashboard Header */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between mb-12 gap-6">
+          <div>
+            <h1 className="text-4xl font-extrabold text-gray-900 tracking-tight">My Assignments</h1>
+            <p className="text-gray-500 mt-2 font-medium">Manage your programming tasks and track your grades.</p>
+          </div>
+          <div className="flex items-center gap-3">
+            <div className="relative">
+              <Search className="absolute left-3 top-3 text-gray-400" size={18} />
+              <input 
+                type="text" 
+                placeholder="Search tasks..." 
+                className="pl-10 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#4a90e2] shadow-sm w-64"
+              />
+            </div>
+            <button className="p-2.5 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors shadow-sm">
+              <Filter className="text-gray-600" size={20} />
+            </button>
+          </div>
+        </div>
+
+        {/* Assignment Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          {assignments.map((task) => (
+            <div 
+              key={task.id} 
+              className="group bg-white rounded-[2rem] border border-gray-100 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-500 overflow-hidden flex flex-col"
+            >
+              <div className="p-8 flex-1">
+                <div className="flex items-start justify-between mb-6">
+                   <div className={`p-3 rounded-2xl ${task.status === 'Submitted' ? 'bg-green-50 text-green-600' : 'bg-blue-50 text-[#4a90e2]'}`}>
+                      <BookOpen size={24} />
+                   </div>
+                   <span className={`text-[10px] font-bold uppercase tracking-widest px-3 py-1 rounded-full ${
+                     task.status === 'Submitted' ? 'bg-green-100 text-green-700' : 
+                     task.status === 'In Progress' ? 'bg-orange-100 text-orange-700' : 'bg-gray-100 text-gray-600'
+                   }`}>
+                      {task.status}
+                   </span>
+                </div>
+                
+                <h3 className="text-xl font-bold text-gray-900 mb-2 group-hover:text-[#4a90e2] transition-colors">{task.title}</h3>
+                <p className="text-xs text-gray-400 font-bold uppercase tracking-tight mb-6">{task.course}</p>
+                
+                <div className="space-y-4 pt-4 border-t border-gray-50">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="flex items-center gap-2 text-gray-500">
+                       <Clock size={16} className="text-gray-400" /> Due Date
+                    </span>
+                    <span className="font-bold text-gray-700">{task.dueDate}</span>
+                  </div>
+                  {task.grade && (
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="flex items-center gap-2 text-gray-500">
+                         <Award size={16} className="text-[#4a90e2]" /> Grade
+                      </span>
+                      <span className="font-extrabold text-green-600">{task.grade}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+              
+              <button 
+                onClick={() => handleOpenAssignment(task)}
+                className="w-full py-5 bg-gray-50 group-hover:bg-[#4a90e2] group-hover:text-white transition-all font-bold text-sm flex items-center justify-center gap-2"
+              >
+                {task.status === 'Submitted' ? 'Review Submission' : 'Open Workspace'} <ArrowRight size={18} />
+              </button>
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );
