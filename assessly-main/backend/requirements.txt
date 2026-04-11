@@ -1,0 +1,22 @@
+# Flask & Extensions
+Flask==3.1.0
+Flask-SQLAlchemy==3.1.1
+Flask-Migrate==4.1.0
+Flask-CORS==5.0.1
+
+# Database
+psycopg2-binary==2.9.10
+SQLAlchemy==2.0.36
+
+# Authentication
+PyJWT==2.10.1
+bcrypt==4.2.1
+
+# Docker SDK
+docker==7.1.0
+
+# HTTP requests (for Moodle integration)
+requests==2.32.3
+
+# WSGI server
+gunicorn==23.0.0
