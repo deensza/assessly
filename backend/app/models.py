@@ -100,6 +100,10 @@ class Assignment(db.Model):
     supported_languages = db.Column(db.JSON, default=lambda: ['python', 'java', 'c'])
     time_limit_seconds = db.Column(db.Integer, default=10)
     memory_limit_mb = db.Column(db.Integer, default=256)
+    weight_correctness = db.Column(db.Float, default=0.4)
+    weight_plagiarism = db.Column(db.Float, default=0.2)
+    weight_structural = db.Column(db.Float, default=0.2)
+    weight_ai = db.Column(db.Float, default=0.2)
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
 
     # Relationships
@@ -117,6 +121,10 @@ class Assignment(db.Model):
             'supported_languages': self.supported_languages,
             'time_limit_seconds': self.time_limit_seconds,
             'memory_limit_mb': self.memory_limit_mb,
+            'weight_correctness': self.weight_correctness,
+            'weight_plagiarism': self.weight_plagiarism,
+            'weight_structural': self.weight_structural,
+            'weight_ai': self.weight_ai,
             'created_at': self.created_at.isoformat() if self.created_at else None
         }
         if include_test_cases:
@@ -157,6 +165,8 @@ class Submission(db.Model):
     code = db.Column(db.Text, nullable=False)
     language = db.Column(db.String(20), nullable=False)
     status = db.Column(db.Enum(SubmissionStatus), default=SubmissionStatus.pending)
+    score_correctness = db.Column(db.Float, nullable=True)
+    score_structural = db.Column(db.Float, nullable=True)
     final_score = db.Column(db.Float, nullable=True)
     plagiarism_score = db.Column(db.Float, nullable=True, default=0.0)
     ai_probability = db.Column(db.Float, nullable=True, default=0.0)
@@ -174,6 +184,8 @@ class Submission(db.Model):
             'code': self.code,
             'language': self.language,
             'status': self.status.value,
+            'score_correctness': self.score_correctness,
+            'score_structural': self.score_structural,
             'final_score': self.final_score,
             'plagiarism_score': self.plagiarism_score,
             'ai_probability': self.ai_probability,

@@ -47,26 +47,31 @@ class GraderService:
             if not submission:
                 return {'error': f'Submission {submission_id} not found'}
 
+            assignment = submission.assignment
+            if not assignment:
+                return {'error': 'Assignment not found'}
+
             # --- Component Scores (all normalized to 0-100) ---
 
             # 1. Correctness (from evaluator)
             correctness = correctness_score
 
-            # 2. Efficiency (based on execution time)
-            efficiency = self._calculate_efficiency(submission)
+            # 2. Structural/Efficiency (Lab 6 strategy - Ported as efficiency/structural)
+            structural = submission.score_structural or 0.0
+            efficiency = structural * 100 # Using structural as efficiency base
 
-            # 3. Plagiarism score (already stored on submission, 0.0-1.0)
+            # 3. Plagiarism score (0.0-1.0)
             plagiarism = submission.plagiarism_score or 0.0
 
-            # 4. AI probability (already stored on submission, 0.0-1.0)
+            # 4. AI probability (0.0-1.0)
             ai_prob = submission.ai_probability or 0.0
 
-            # --- Final Score Calculation ---
+            # --- Final Score Calculation (Using Assignment Weights) ---
             final_score = (
-                correctness * self.WEIGHT_CORRECTNESS
-                + efficiency * self.WEIGHT_EFFICIENCY
-                + (1.0 - plagiarism) * 100 * self.WEIGHT_PLAGIARISM
-                + (1.0 - ai_prob) * 100 * self.WEIGHT_AI
+                correctness * assignment.weight_correctness +
+                ((1.0 - plagiarism) * 100 * assignment.weight_plagiarism) +
+                (efficiency * assignment.weight_structural) +
+                ((1.0 - ai_prob) * 100 * assignment.weight_ai)
             )
             final_score = round(min(100, max(0, final_score)), 2)
 

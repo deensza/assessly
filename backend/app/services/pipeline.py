@@ -9,6 +9,7 @@ Runs in a background thread so the API returns immediately.
 import threading
 import logging
 
+from app.models import Submission, db
 from app.services.evaluator import evaluator_service
 from app.services.grader import grader_service
 
@@ -36,13 +37,39 @@ def run_evaluation_pipeline(app, submission_id: int):
             return
 
         correctness_score = eval_result['correctness_score']
-        logger.info(
-            f"Evaluation done: {eval_result['passed_tests']}/{eval_result['total_tests']} "
-            f"passed, correctness={correctness_score}"
-        )
+        
+        # Update submission with correctness score
+        with app.app_context():
+            submission = Submission.query.get(submission_id)
+            submission.score_correctness = correctness_score
 
-        # Step 2: Analyze (placeholder — will be implemented in Phase 4)
-        # analyzer.analyze(submission_id, app=app)
+        # Step 2: Analyze (Applying Strategy Pattern from Lab 6/7)
+        from app.services.strategies import (
+            SubmissionAnalyzer, TokenBasedPlagiarismStrategy, 
+            StructuralStrategy, AIProbabilityStrategy
+        )
+        
+        analyzer = SubmissionAnalyzer()
+        with app.app_context():
+            submission = Submission.query.get(submission_id)
+            code = submission.code
+
+            # Plagiarism Strategy
+            analyzer.set_strategy(TokenBasedPlagiarismStrategy())
+            plag_score = analyzer.analyze_submission(code)
+            submission.plagiarism_score = plag_score
+
+            # Structural Strategy
+            analyzer.set_strategy(StructuralStrategy())
+            struct_score = analyzer.analyze_submission(code)
+            submission.score_structural = struct_score
+
+            # AI Strategy
+            analyzer.set_strategy(AIProbabilityStrategy())
+            ai_score = analyzer.analyze_submission(code)
+            submission.ai_probability = ai_score
+            
+            db.session.commit()
 
         # Step 3: Grade
         grade_result = grader_service.grade(
