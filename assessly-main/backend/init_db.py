@@ -1,7 +1,7 @@
 from app import create_app, db
 from app.models import User, Assignment, Course, UserRole
 from datetime import datetime, timedelta, timezone
-from werkzeug.security import generate_password_hash
+from app.utils.auth import hash_password
 
 app = create_app()
 
@@ -17,7 +17,7 @@ with app.app_context():
         instructor = User(
             name='Dr. Suphi Ucar',
             email='instructor@yasar.edu.tr',
-            password_hash=generate_password_hash('password123'),
+            password_hash=hash_password('password123'),
             role=UserRole.instructor
         )
         db.session.add(instructor)
@@ -27,7 +27,7 @@ with app.app_context():
         student = User(
             name='Deniz Akkaya',
             email='deniz@stu.yasar.edu.tr',
-            password_hash=generate_password_hash('password123'),
+            password_hash=hash_password('password123'),
             role=UserRole.student
         )
         db.session.add(student)

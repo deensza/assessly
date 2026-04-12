@@ -1,5 +1,6 @@
 from flask import Blueprint, request, jsonify, current_app
 from app.utils.auth import role_required
+from app.services.moodle import create_moodle_service
 
 admin_bp = Blueprint('admin', __name__)
 
@@ -47,6 +48,19 @@ def update_sandbox_config():
     }), 200
 
 
+@admin_bp.route('/moodle/config', methods=['GET'])
+@role_required('admin')
+def get_moodle_config():
+    """Get current Moodle configuration (token masked)."""
+    return jsonify({
+        'config': {
+            'api_url': _moodle_config['api_url'],
+            'enabled': _moodle_config['enabled'],
+            'has_token': bool(_moodle_config['token']),
+        }
+    }), 200
+
+
 @admin_bp.route('/moodle/config', methods=['PUT'])
 @role_required('admin')
 def update_moodle_config():
@@ -62,7 +76,11 @@ def update_moodle_config():
 
     return jsonify({
         'message': 'Moodle configuration updated',
-        'config': {k: v for k, v in _moodle_config.items() if k != 'token'}
+        'config': {
+            'api_url': _moodle_config['api_url'],
+            'enabled': _moodle_config['enabled'],
+            'has_token': bool(_moodle_config['token']),
+        }
     }), 200
 
 
@@ -71,23 +89,57 @@ def update_moodle_config():
 def test_moodle_connection():
     """Test Moodle API connection."""
     if not _moodle_config['api_url'] or not _moodle_config['token']:
-        return jsonify({'error': 'Moodle not configured'}), 400
+        return jsonify({'error': 'Moodle not configured. Set API URL and token first.'}), 400
 
-    # Will be implemented in Phase 6 with actual Moodle API calls
     try:
-        import requests
-        response = requests.get(
-            f"{_moodle_config['api_url']}/webservice/rest/server.php",
-            params={
-                'wstoken': _moodle_config['token'],
-                'wsfunction': 'core_webservice_get_site_info',
-                'moodlewsrestformat': 'json'
-            },
-            timeout=10
-        )
-        data = response.json()
-        if 'exception' in data:
-            return jsonify({'status': 'error', 'message': data.get('message', 'Unknown error')}), 400
-        return jsonify({'status': 'connected', 'site_name': data.get('sitename', 'Unknown')}), 200
+        svc = create_moodle_service(_moodle_config['api_url'], _moodle_config['token'])
+        result = svc.test_connection()
+        return jsonify(result), 200
+    except ValueError as e:
+        return jsonify({'status': 'error', 'message': str(e)}), 400
+    except ConnectionError as e:
+        return jsonify({'status': 'error', 'message': str(e)}), 502
     except Exception as e:
         return jsonify({'status': 'error', 'message': str(e)}), 500
+
+
+@admin_bp.route('/moodle/assignments', methods=['GET'])
+@role_required('admin', 'instructor')
+def list_moodle_assignments():
+    """Fetch assignments from Moodle."""
+    if not _moodle_config.get('enabled'):
+        return jsonify({'error': 'Moodle integration is disabled'}), 400
+
+    try:
+        svc = create_moodle_service(_moodle_config['api_url'], _moodle_config['token'])
+        assignments = svc.get_assignments()
+        return jsonify({'assignments': assignments}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@admin_bp.route('/moodle/sync-grade', methods=['POST'])
+@role_required('admin', 'instructor')
+def sync_grade_to_moodle():
+    """Push a grade to Moodle."""
+    if not _moodle_config.get('enabled'):
+        return jsonify({'error': 'Moodle integration is disabled'}), 400
+
+    data = request.get_json()
+    required = ['moodle_assignment_id', 'moodle_user_id', 'grade']
+    for field in required:
+        if field not in data:
+            return jsonify({'error': f'Missing required field: {field}'}), 400
+
+    try:
+        svc = create_moodle_service(_moodle_config['api_url'], _moodle_config['token'])
+        result = svc.push_grade(
+            assignment_id=data['moodle_assignment_id'],
+            user_id=data['moodle_user_id'],
+            grade=data['grade'],
+            feedback=data.get('feedback', '')
+        )
+        return jsonify(result), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
