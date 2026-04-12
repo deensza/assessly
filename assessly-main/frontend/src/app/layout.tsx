@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import MoodleHeader from "@/components/layout/MoodleHeader";
+import { Providers } from "./providers";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -24,8 +25,10 @@ export default function RootLayout({
       className={`${inter.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col pt-[60px] bg-[var(--background)] font-sans">
-        <MoodleHeader />
-        <main className="flex-1 flex flex-col">{children}</main>
+        <Providers>
+          <MoodleHeader />
+          <main className="flex-1 flex flex-col">{children}</main>
+        </Providers>
       </body>
     </html>
   );
