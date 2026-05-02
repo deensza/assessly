@@ -1,5 +1,6 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { coursesApi, assignmentsApi, submissionsApi, Course, Assignment, Submission } from "@/lib/api";
 import Editor from "@monaco-editor/react";
 import { 
   Play, 
@@ -22,45 +23,115 @@ export default function StudentPortal() {
   const [selectedAssignment, setSelectedAssignment] = useState<any>(null);
   const [code, setCode] = useState("");
 
-  const assignments = [
-    {
-      id: 1,
-      title: "Merge Sort Optimization",
-      course: "COMP 3304 - Yazılım Mühendisliği",
-      dueDate: "15 Apr 2026",
-      status: "In Progress",
-      difficulty: "Medium",
-      initialCode: "def merge_sort(arr):\n    # Base case\n    if len(arr) <= 1:\n        return arr\n    # ...",
-      description: "Implement the Merge Sort algorithm in Python. Your function merge_sort(arr) should take an unsorted list of integers and return a new list sorted in ascending order."
-    },
-    {
-      id: 2,
-      title: "Linked List Deletion",
-      course: "COMP 3328 - Gömülü Sistemler",
-      dueDate: "18 Apr 2026",
-      status: "Not Started",
-      difficulty: "Easy",
-      initialCode: "class Node:\n    def __init__(self, data):\n        self.data = data\n        self.next = None\n\ndef delete_node(head, key):\n    # implementation here\n    pass",
-      description: "Given a singly linked list and a key, delete the first occurrence of the key in the linked list."
-    },
-    {
-      id: 3,
-      title: "Red-Black Tree Insertion",
-      course: "COMP 3304 - Yazılım Mühendisliği",
-      dueDate: "10 Apr 2026",
-      status: "Submitted",
-      grade: "92/100",
-      difficulty: "Hard",
-      initialCode: "",
-      description: "Implement the insertion logic for a Red-Black Tree maintaining all balancing properties."
+  const [courses, setCourses] = useState<Course[]>([]);
+  const [assignments, setAssignments] = useState<Assignment[]>([]);
+  const [mySubmissions, setMySubmissions] = useState<Submission[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function fetchData() {
+      try {
+        setLoading(true);
+        const coursesData = await coursesApi.list();
+        setCourses(coursesData);
+        
+        // Her kurs için ödevleri çek
+        const allAssignments: Assignment[] = [];
+        for (const course of coursesData) {
+          try {
+            const courseAssignments = await assignmentsApi.list(course.id);
+            if (Array.isArray(courseAssignments)) {
+              allAssignments.push(...courseAssignments);
+            }
+          } catch (e) {
+            console.error("Error fetching assignments for course", course.id);
+          }
+        }
+        setAssignments(allAssignments);
+        
+        // Kendi submission'larımı çek
+        try {
+           const subsData = await submissionsApi.my();
+           setMySubmissions(subsData.submissions || []);
+        } catch (e) {
+           console.error("Error fetching submissions");
+        }
+      } catch (err) {
+        setError('Veriler yüklenirken hata oluştu');
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
     }
-  ];
+    fetchData();
+  }, []);
+
+  const handleEnroll = async (courseId: number) => {
+    try {
+      await coursesApi.enroll(courseId);
+      const updatedCourses = await coursesApi.list();
+      setCourses(updatedCourses);
+    } catch (err) {
+      setError('Kursa kayıt olurken hata oluştu');
+    }
+  };
+
+  const handleSubmit = async (assignmentId: number, code: string, language: string) => {
+    try {
+      const result = await submissionsApi.submit(assignmentId, code, language);
+      setView('dashboard');
+      // Reload submissions
+      const subsData = await submissionsApi.my();
+      setMySubmissions(subsData.submissions || []);
+      alert("Submission successful!");
+    } catch (err) {
+      setError('Kod gönderilirken hata oluştu');
+    }
+  };
 
   const handleOpenAssignment = (assignment: any) => {
     setSelectedAssignment(assignment);
-    setCode(assignment.initialCode);
+    setCode(assignment.initialCode || "# Start coding here...");
     setView('workspace');
   };
+
+  const enrichedAssignments = assignments.map(a => {
+    const sub = mySubmissions.find(s => s.assignment_id === a.id);
+    const course = courses.find(c => c.id === a.course_id);
+    return {
+      id: a.id,
+      title: a.title,
+      course: course?.title || 'Unknown Course',
+      dueDate: new Date(a.due_date).toLocaleDateString(),
+      status: sub ? 'Submitted' : 'Not Started',
+      grade: sub?.final_score !== null ? `${sub?.final_score?.toFixed(1)}/100` : null,
+      description: a.description,
+      initialCode: ""
+    };
+  });
+
+  if (loading) {
+    return (
+      <div className="flex-1 flex items-center justify-center">
+        <div className="animate-pulse flex flex-col items-center">
+          <div className="w-12 h-12 border-4 border-[#4a90e2] border-t-transparent rounded-full animate-spin"></div>
+          <p className="mt-4 text-gray-500 font-medium">Loading workspace...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex-1 flex flex-col items-center justify-center bg-[#f4f7f9] p-8">
+        <AlertCircle size={48} className="text-red-500 mb-4" />
+        <h2 className="text-2xl font-bold text-gray-900 mb-2">Something went wrong</h2>
+        <p className="text-gray-600 mb-6">{error}</p>
+        <button onClick={() => window.location.reload()} className="px-6 py-2 bg-[#4a90e2] text-white rounded-lg font-bold">Try Again</button>
+      </div>
+    );
+  }
 
   if (view === 'workspace' && selectedAssignment) {
     return (
@@ -84,7 +155,10 @@ export default function StudentPortal() {
             <button className="px-4 py-2 bg-white border border-gray-200 rounded-xl text-sm font-bold hover:bg-gray-50 transition-colors flex items-center shadow-sm text-gray-700">
               <Play className="w-4 h-4 mr-2 text-[#4a90e2]"/> Run Tests
             </button>
-            <button className="px-4 py-2 bg-[#4a90e2] hover:bg-[#357abd] text-white rounded-xl text-sm font-bold transition-colors flex items-center shadow-lg shadow-blue-500/20">
+            <button 
+              onClick={() => handleSubmit(selectedAssignment.id, code, "python")}
+              className="px-4 py-2 bg-[#4a90e2] hover:bg-[#357abd] text-white rounded-xl text-sm font-bold transition-colors flex items-center shadow-lg shadow-blue-500/20"
+            >
               <CheckCircle2 className="w-4 h-4 mr-2"/> Submit Solution
             </button>
           </div>
@@ -179,7 +253,7 @@ export default function StudentPortal() {
 
         {/* Assignment Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {assignments.map((task) => (
+          {enrichedAssignments.map((task) => (
             <div 
               key={task.id} 
               className="group bg-white rounded-[2rem] border border-gray-100 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-500 overflow-hidden flex flex-col"

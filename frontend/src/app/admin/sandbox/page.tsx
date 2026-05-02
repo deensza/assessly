@@ -1,13 +1,55 @@
 "use client";
-import { Server, Activity, Cpu, HardDrive, RefreshCw, Box } from "lucide-react";
+import { useState, useEffect } from "react";
+import { adminApi } from "@/lib/api";
+import { Server, Activity, Cpu, HardDrive, RefreshCw, Box, Loader2 } from "lucide-react";
 
 export default function AdminSandbox() {
+  const [config, setConfig] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
   const containers = [
     { id: "cnt-881", name: "python-grader-01", status: "Running", cpu: "1.2%", ram: "45MB", uptime: "2d 4h" },
     { id: "cnt-882", name: "python-grader-02", status: "Running", cpu: "0.5%", ram: "42MB", uptime: "2d 4h" },
     { id: "cnt-883", name: "java-grader-01", status: "Idling", cpu: "0.0%", ram: "115MB", uptime: "1d 12h" },
     { id: "cnt-884", name: "cpp-grader-01", status: "Running", cpu: "14.2%", ram: "68MB", uptime: "5h 20m" },
   ];
+
+  useEffect(() => {
+    async function fetchData() {
+      try {
+        setLoading(true);
+        const data = await adminApi.getSandboxConfig();
+        setConfig(data);
+      } catch (err) {
+        setError('Sandbox konfigürasyonu yüklenemedi');
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchData();
+  }, []);
+
+  const handleSave = async () => {
+    if (!config) return;
+    try {
+      await adminApi.updateSandboxConfig(config);
+      alert('Sandbox ayarları kaydedildi');
+    } catch (err) {
+      setError('Kaydedilirken hata oluştu');
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex-1 flex items-center justify-center p-12 h-screen bg-[#0f172a]">
+        <div className="animate-pulse flex flex-col items-center">
+          <Loader2 size={48} className="animate-spin text-blue-500 mb-4" />
+          <p className="text-slate-400 font-medium">Yükleniyor...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-8 space-y-8 bg-[#0f172a] min-h-screen text-slate-200">

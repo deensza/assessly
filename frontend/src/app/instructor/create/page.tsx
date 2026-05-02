@@ -1,13 +1,66 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { coursesApi, assignmentsApi, Course } from "@/lib/api";
 import { CopyPlus, Save, Trash2, Cpu, FileCheck2, Scale, BrainCircuit } from "lucide-react";
 
 export default function CreateAssignment() {
-  const [testCases, setTestCases] = useState([{ input: "", output: "", hidden: false }]);
+  const [testCases, setTestCases] = useState([{ input: "", expectedOutput: "", isHidden: false, weight: 1 }]);
   const [weights, setWeights] = useState({ correctness: 40, plagiarism: 20, structural: 20, ai: 20 });
+  const [courses, setCourses] = useState<Course[]>([]);
+  const [selectedCourseId, setSelectedCourseId] = useState<number>(0);
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [dueDate, setDueDate] = useState("");
+  const [selectedLanguages, setSelectedLanguages] = useState<string[]>(["python", "java", "c"]);
+  const [timeLimit, setTimeLimit] = useState(10);
+  const [memoryLimit, setMemoryLimit] = useState(256);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const router = useRouter();
+
+  useEffect(() => {
+    async function fetchCourses() {
+      try {
+        const data = await coursesApi.list();
+        setCourses(data);
+        if (data.length > 0) setSelectedCourseId(data[0].id);
+      } catch (err) {
+        setError('Kurslar yüklenemedi');
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchCourses();
+  }, []);
+
+  const handlePublish = async () => {
+    try {
+      setLoading(true);
+      await assignmentsApi.create({
+        course_id: selectedCourseId,
+        title,
+        description,
+        due_date: dueDate ? new Date(dueDate).toISOString() : new Date().toISOString(),
+        supported_languages: selectedLanguages,
+        time_limit_seconds: timeLimit,
+        memory_limit_mb: memoryLimit,
+        test_cases: testCases.map(tc => ({
+          input: tc.input,
+          expected_output: tc.expectedOutput,
+          is_hidden: tc.isHidden,
+          weight: tc.weight,
+        })),
+      });
+      router.push('/instructor');
+    } catch (err) {
+      setError('Ödev oluşturulurken hata oluştu');
+      setLoading(false);
+    }
+  };
 
   const addTestCase = () => {
-    setTestCases([...testCases, { input: "", output: "", hidden: false }]);
+    setTestCases([...testCases, { input: "", expectedOutput: "", isHidden: false, weight: 1 }]);
   };
 
   const removeTestCase = (index: number) => {
@@ -26,6 +79,18 @@ export default function CreateAssignment() {
         <p className="text-slate-400 mt-1">Define the problem description, constraints, and AI analysis strategy weights.</p>
       </div>
 
+      {loading && (
+        <div className="flex items-center justify-center p-8">
+          <div className="w-8 h-8 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
+        </div>
+      )}
+      
+      {error && (
+        <div className="p-4 bg-rose-500/10 border border-rose-500/20 rounded-xl text-rose-400 font-medium">
+          {error}
+        </div>
+      )}
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         
         {/* Left Column: Form & Test Cases */}
@@ -34,18 +99,56 @@ export default function CreateAssignment() {
             <h2 className="text-xl font-semibold mb-4 border-b border-[var(--border)] pb-2">General Details</h2>
             
             <div>
+              <label className="block text-sm font-medium text-slate-300 mb-2">Course</label>
+              <select 
+                value={selectedCourseId}
+                onChange={(e) => setSelectedCourseId(Number(e.target.value))}
+                className="w-full bg-[var(--surface-hover)] border border-[var(--border)] rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-shadow"
+              >
+                {courses.map(c => (
+                  <option key={c.id} value={c.id}>{c.title}</option>
+                ))}
+              </select>
+            </div>
+
+            <div>
               <label className="block text-sm font-medium text-slate-300 mb-2">Assignment Title</label>
               <input 
                 type="text" 
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
                 placeholder="e.g. Merge Sort Implementation"
                 className="w-full bg-[var(--surface-hover)] border border-[var(--border)] rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-shadow"
               />
             </div>
             
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">Due Date</label>
+                <input 
+                  type="date" 
+                  value={dueDate}
+                  onChange={(e) => setDueDate(e.target.value)}
+                  className="w-full bg-[var(--surface-hover)] border border-[var(--border)] rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-shadow"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">Time Limit (sec)</label>
+                <input 
+                  type="number" 
+                  value={timeLimit}
+                  onChange={(e) => setTimeLimit(Number(e.target.value))}
+                  className="w-full bg-[var(--surface-hover)] border border-[var(--border)] rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-shadow"
+                />
+              </div>
+            </div>
+
             <div>
               <label className="block text-sm font-medium text-slate-300 mb-2">Problem Description (Markdown supported)</label>
               <textarea 
                 rows={6}
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
                 placeholder="Describe the algorithm requirements here..."
                 className="w-full bg-[var(--surface-hover)] border border-[var(--border)] rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-shadow resize-y"
               ></textarea>
@@ -71,6 +174,12 @@ export default function CreateAssignment() {
                     <label className="text-xs font-semibold text-slate-400 uppercase">Input</label>
                     <textarea 
                       rows={2} 
+                      value={tc.input}
+                      onChange={(e) => {
+                        const newCases = [...testCases];
+                        newCases[idx].input = e.target.value;
+                        setTestCases(newCases);
+                      }}
                       className="w-full bg-[var(--surface-hover)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm font-mono placeholder:font-sans focus:outline-none focus:border-indigo-500"
                       placeholder="Input mapping"
                     ></textarea>
@@ -79,13 +188,28 @@ export default function CreateAssignment() {
                     <label className="text-xs font-semibold text-slate-400 uppercase">Expected Output</label>
                     <textarea 
                       rows={2} 
+                      value={tc.expectedOutput}
+                      onChange={(e) => {
+                        const newCases = [...testCases];
+                        newCases[idx].expectedOutput = e.target.value;
+                        setTestCases(newCases);
+                      }}
                       className="w-full bg-[var(--surface-hover)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm font-mono placeholder:font-sans focus:outline-none focus:border-indigo-500"
                       placeholder="Expected result"
                     ></textarea>
                   </div>
                   <div className="flex flex-col justify-between items-end">
                     <label className="flex items-center space-x-2 text-sm cursor-pointer">
-                      <input type="checkbox" className="w-4 h-4 rounded border-slate-600 text-indigo-500 focus:ring-indigo-500 bg-[var(--surface-hover)]" />
+                      <input 
+                        type="checkbox" 
+                        checked={tc.isHidden}
+                        onChange={(e) => {
+                          const newCases = [...testCases];
+                          newCases[idx].isHidden = e.target.checked;
+                          setTestCases(newCases);
+                        }}
+                        className="w-4 h-4 rounded border-slate-600 text-indigo-500 focus:ring-indigo-500 bg-[var(--surface-hover)]" 
+                      />
                       <span className="text-slate-300">Hidden Test</span>
                     </label>
                     {testCases.length > 1 && (
@@ -165,7 +289,11 @@ export default function CreateAssignment() {
             </div>
           </div>
 
-          <button className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-4 rounded-xl flex items-center justify-center transition-colors shadow-lg shadow-indigo-600/20 active:scale-[0.98]">
+          <button 
+            onClick={handlePublish}
+            disabled={loading}
+            className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-4 rounded-xl flex items-center justify-center transition-colors shadow-lg shadow-indigo-600/20 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
+          >
             <Save className="w-5 h-5 mr-2" /> Publish Assignment
           </button>
         </div>

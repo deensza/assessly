@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { coursesApi, assignmentsApi, submissionsApi, Course, Assignment, Submission } from "@/lib/api";
 import { Activity, CheckCircle2, AlertTriangle, Clock, Sliders, Save, Target, ShieldAlert, Cpu, Code2 } from "lucide-react";
 import Link from "next/link";
 
@@ -11,6 +12,78 @@ export default function InstructorDashboard() {
     structural: 20,
     ai: 20
   });
+
+  const [stats, setStats] = useState({
+    totalAssignments: 0,
+    totalSubmissions: 0,
+    flaggedCount: 0,
+    averageScore: 0,
+  });
+  const [recentAssignments, setRecentAssignments] = useState<(Assignment & { submissionsCount: number; avgScore: number; courseTitle: string })[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function fetchStats() {
+      try {
+        setLoading(true);
+        const courses = await coursesApi.list();
+        const allAssignments = [];
+        const allSubmissions: Submission[] = [];
+        
+        for (const course of courses) {
+          try {
+            const courseAssignments = await assignmentsApi.list(course.id);
+            if (Array.isArray(courseAssignments)) {
+              for (const assignment of courseAssignments) {
+                const subsData = await submissionsApi.listByAssignment(assignment.id);
+                const subs = subsData.submissions || [];
+                
+                const avgScore = subs.length > 0 ? subs.reduce((sum: number, s: any) => sum + (s.final_score || 0), 0) / subs.length : 0;
+                
+                allAssignments.push({
+                   ...assignment,
+                   courseTitle: course.title,
+                   submissionsCount: subs.length,
+                   avgScore
+                });
+                allSubmissions.push(...subs);
+              }
+            }
+          } catch (e) {}
+        }
+        
+        setStats({
+          totalAssignments: allAssignments.length,
+          totalSubmissions: allSubmissions.length,
+          flaggedCount: allSubmissions.filter(s => s.flagged).length,
+          averageScore: allSubmissions.length > 0 ? allSubmissions.reduce((sum, s) => sum + (s.final_score || 0), 0) / allSubmissions.length : 0,
+        });
+        
+        setRecentAssignments(allAssignments.sort((a,b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()).slice(0, 5));
+      } catch (err) {
+        setError('Veriler yüklenirken hata oluştu');
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchStats();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="flex-1 flex items-center justify-center p-12">
+        <div className="animate-pulse flex flex-col items-center">
+          <div className="w-12 h-12 border-4 border-[#4a90e2] border-t-transparent rounded-full animate-spin"></div>
+          <p className="mt-4 text-gray-500 font-medium">Loading dashboard...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return <div className="p-8 text-red-500">{error}</div>;
+  }
 
   return (
     <div className="space-y-8 max-w-6xl pb-12">
@@ -42,7 +115,7 @@ export default function InstructorDashboard() {
                 <h3 className="font-bold text-[10px] uppercase tracking-widest">Active Assignments</h3>
                 <Activity className="w-5 h-5 text-[#4a90e2]" />
               </div>
-              <span className="text-3xl font-bold text-gray-900">12</span>
+              <span className="text-3xl font-bold text-gray-900">{stats.totalAssignments}</span>
             </div>
 
             <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 border-l-8 border-l-emerald-500 hover:shadow-md transition-shadow">
@@ -50,7 +123,7 @@ export default function InstructorDashboard() {
                 <h3 className="font-bold text-[10px] uppercase tracking-widest">Total Submissions</h3>
                 <CheckCircle2 className="w-5 h-5 text-emerald-500" />
               </div>
-              <span className="text-3xl font-bold text-gray-900">459</span>
+              <span className="text-3xl font-bold text-gray-900">{stats.totalSubmissions}</span>
             </div>
           </div>
 
@@ -70,22 +143,23 @@ export default function InstructorDashboard() {
                   </tr>
                 </thead>
                 <tbody className="text-sm divide-y divide-gray-50">
-                  <tr className="hover:bg-gray-50/50 transition-colors">
-                    <td className="px-8 py-5">
-                       <div className="font-bold text-gray-800">Merge Sort Optimization</div>
-                       <div className="text-[10px] text-gray-400">COMP 3304 • 120 Submissions</div>
-                    </td>
-                    <td className="px-8 py-5 font-bold text-emerald-600">84.5%</td>
-                    <td className="px-8 py-5"><span className="bg-emerald-50 text-emerald-600 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-tight">Completed</span></td>
-                  </tr>
-                  <tr className="hover:bg-gray-50/50 transition-colors">
-                    <td className="px-8 py-5">
-                       <div className="font-bold text-gray-800">Dynamic Programming</div>
-                       <div className="text-[10px] text-gray-400">COMP 3304 • 45 Submissions</div>
-                    </td>
-                    <td className="px-8 py-5 font-bold text-[#4a90e2]">Pending</td>
-                    <td className="px-8 py-5"><span className="bg-blue-50 text-[#4a90e2] px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-tight">Active</span></td>
-                  </tr>
+                  {recentAssignments.map((a) => (
+                    <tr key={a.id} className="hover:bg-gray-50/50 transition-colors">
+                      <td className="px-8 py-5">
+                         <div className="font-bold text-gray-800">{a.title}</div>
+                         <div className="text-[10px] text-gray-400">{a.courseTitle} • {a.submissionsCount} Submissions</div>
+                      </td>
+                      <td className="px-8 py-5 font-bold text-emerald-600">{a.avgScore.toFixed(1)}%</td>
+                      <td className="px-8 py-5">
+                        <Link href={`/instructor/submissions?assignment_id=${a.id}`} className="bg-blue-50 text-[#4a90e2] px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-tight hover:bg-blue-100">
+                          View
+                        </Link>
+                      </td>
+                    </tr>
+                  ))}
+                  {recentAssignments.length === 0 && (
+                    <tr><td colSpan={3} className="px-8 py-5 text-center text-gray-400">No assignments found</td></tr>
+                  )}
                 </tbody>
               </table>
             </div>

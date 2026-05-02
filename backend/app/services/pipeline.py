@@ -43,31 +43,52 @@ def run_evaluation_pipeline(app, submission_id: int):
             submission = Submission.query.get(submission_id)
             submission.score_correctness = correctness_score
 
-        # Step 2: Analyze (Applying Strategy Pattern from Lab 6/7)
+        # Step 2: Analyze
         from app.services.strategies import (
-            SubmissionAnalyzer, TokenBasedPlagiarismStrategy, 
-            StructuralStrategy, AIProbabilityStrategy
+            TokenBasedPlagiarismStrategy,
+            ASTPlagiarismStrategy,
+            AIProbabilityStrategy,
         )
+        from app.models import PlagiarismPair
         
-        analyzer = SubmissionAnalyzer()
         with app.app_context():
             submission = Submission.query.get(submission_id)
             code = submission.code
+            language = submission.language
 
-            # Plagiarism Strategy
-            analyzer.set_strategy(TokenBasedPlagiarismStrategy())
-            plag_score = analyzer.analyze_submission(code)
-            submission.plagiarism_score = plag_score
+            other_submissions = Submission.query.filter(
+                Submission.assignment_id == submission.assignment_id,
+                Submission.id != submission.id,
+                Submission.status == 'completed'
+            ).all()
+            
+            all_submissions_code = [s.code for s in other_submissions]
 
-            # Structural Strategy
-            analyzer.set_strategy(StructuralStrategy())
-            struct_score = analyzer.analyze_submission(code)
-            submission.score_structural = struct_score
+            token_strategy = TokenBasedPlagiarismStrategy()
+            ast_strategy = ASTPlagiarismStrategy()
+            ai_strategy = AIProbabilityStrategy()
 
-            # AI Strategy
-            analyzer.set_strategy(AIProbabilityStrategy())
-            ai_score = analyzer.analyze_submission(code)
-            submission.ai_probability = ai_score
+            # Calculate overall scores
+            plagiarism_token_score = token_strategy.analyze(code, all_submissions_code, language)
+            plagiarism_ast_score = ast_strategy.analyze(code, all_submissions_code, language)
+            
+            submission.plagiarism_score = max(plagiarism_token_score, plagiarism_ast_score)
+            submission.ai_probability = ai_strategy.analyze(code, all_submissions_code, language)
+            
+            # Create PlagiarismPair records
+            for other_sub in other_submissions:
+                pair_token_score = token_strategy.analyze(code, [other_sub.code], language)
+                pair_ast_score = ast_strategy.analyze(code, [other_sub.code], language)
+                
+                if pair_token_score >= 0.8 or pair_ast_score == 1.0:
+                    pair = PlagiarismPair(
+                        assignment_id=submission.assignment_id,
+                        submission_a_id=submission.id,
+                        submission_b_id=other_sub.id,
+                        similarity_score=max(pair_token_score, pair_ast_score),
+                        method="AST" if pair_ast_score == 1.0 else "Token"
+                    )
+                    db.session.add(pair)
             
             db.session.commit()
 

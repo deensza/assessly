@@ -1,14 +1,64 @@
 "use client";
-import { Network, Activity, RefreshCw, CheckCircle2, AlertCircle, Share2 } from "lucide-react";
+import { useState, useEffect } from "react";
+import { adminApi } from "@/lib/api";
+import { Network, Activity, RefreshCw, CheckCircle2, AlertCircle, Share2, Loader2 } from "lucide-react";
 
 export default function AdminMoodleBridge() {
-  const syncLogs = [
-    { id: 1045, event: "Course Pull", target: "COMP 3304", timestamp: "Today, 11:20", status: "Success" },
-    { id: 1044, event: "Grade Push", target: "Assignment #8", timestamp: "Today, 10:15", status: "Success" },
-    { id: 1043, event: "User Sync", target: "Section A", timestamp: "Today, 09:00", status: "Success" },
-    { id: 1042, event: "Auth Token Refresh", target: "System", timestamp: "Yesterday, 23:55", status: "Success" },
-    { id: 1041, event: "Grade Push", target: "Assignment #7", timestamp: "Yesterday, 20:20", status: "Partial Failure" },
-  ];
+  const [syncLogs, setSyncLogs] = useState<any[]>([]);
+  const [apiUrl, setApiUrl] = useState("https://moodle.yasar.edu.tr/webservice/rest/server.php");
+  const [token, setToken] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [testResult, setTestResult] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function fetchData() {
+      try {
+        setLoading(true);
+        const data = await adminApi.getMoodleConfig();
+        setApiUrl(data.api_url || "");
+        setToken(data.token || "");
+        // Logs can be fetched if API supports it, otherwise keep empty or mock
+        setSyncLogs([
+          { id: 1045, event: "Course Pull", target: "COMP 3304", timestamp: "Today, 11:20", status: "Success" }
+        ]);
+      } catch (err) {
+        setError('Ayarlar yüklenemedi');
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchData();
+  }, []);
+
+  const handleTest = async () => {
+    try {
+      const result = await adminApi.testMoodle(apiUrl, token);
+      setTestResult(result.success ? 'Bağlantı başarılı' : 'Bağlantı başarısız');
+    } catch (err) {
+      setTestResult('Bağlantı hatası');
+    }
+  };
+
+  const handleSave = async () => {
+    try {
+      await adminApi.saveMoodleConfig(apiUrl, token);
+      alert('Moodle ayarları kaydedildi');
+    } catch (err) {
+      setError('Kaydedilirken hata oluştu');
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex-1 flex items-center justify-center p-12 h-screen bg-[#0f172a]">
+        <div className="animate-pulse flex flex-col items-center">
+          <Loader2 size={48} className="animate-spin text-blue-500 mb-4" />
+          <p className="text-slate-400 font-medium">Yükleniyor...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-8 space-y-8 bg-[#0f172a] min-h-screen text-slate-200">
@@ -30,10 +80,31 @@ export default function AdminMoodleBridge() {
         <div className="lg:col-span-1 space-y-6">
            <div className="bg-slate-800/40 p-6 rounded-2xl border border-slate-700/50">
               <h3 className="text-slate-500 text-[10px] font-bold uppercase mb-4 tracking-widest">Bridge Configuration</h3>
+              {error && <div className="text-red-400 text-xs mb-4">{error}</div>}
+              {testResult && <div className="text-green-400 text-xs mb-4">{testResult}</div>}
               <div className="space-y-4">
-                 <div><p className="text-[10px] text-slate-500 mb-1">Moodle Endpoint</p><p className="text-sm font-mono text-blue-400 break-all">https://moodle.yasar.edu.tr/webservice/rest/server.php</p></div>
-                 <div><p className="text-[10px] text-slate-500 mb-1">Last Handshake</p><p className="text-sm text-slate-300">Oct 12, 01:30:04</p></div>
-                 <div><p className="text-[10px] text-slate-500 mb-1">Active Protocols</p><p className="text-sm text-slate-300">REST, XM-RPC, OAuth 2.0</p></div>
+                 <div>
+                    <label className="text-[10px] text-slate-500 mb-1 block">Moodle Endpoint</label>
+                    <input 
+                      type="text" 
+                      value={apiUrl}
+                      onChange={(e) => setApiUrl(e.target.value)}
+                      className="w-full bg-slate-900 border border-slate-700 rounded p-2 text-sm text-blue-400 outline-none focus:border-blue-500" 
+                    />
+                 </div>
+                 <div>
+                    <label className="text-[10px] text-slate-500 mb-1 block">Token</label>
+                    <input 
+                      type="password" 
+                      value={token}
+                      onChange={(e) => setToken(e.target.value)}
+                      className="w-full bg-slate-900 border border-slate-700 rounded p-2 text-sm text-slate-300 outline-none focus:border-blue-500" 
+                    />
+                 </div>
+                 <div className="flex gap-2">
+                    <button onClick={handleTest} className="flex-1 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded text-xs font-bold">Test Connection</button>
+                    <button onClick={handleSave} className="flex-1 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded text-xs font-bold">Save</button>
+                 </div>
               </div>
            </div>
            <div className="bg-blue-600 p-6 rounded-2xl shadow-xl shadow-blue-900/40 text-white">
