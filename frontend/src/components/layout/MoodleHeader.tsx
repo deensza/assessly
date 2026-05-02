@@ -61,7 +61,7 @@ export default function MoodleHeader() {
   const renderNavLinks = () => {
     const commonPrefix = (
       <>
-        <Link href="/blank" className="hover:text-blue-100 transition-colors">Home</Link>
+        <Link href="/" className="hover:text-blue-100 transition-colors">Home</Link>
       </>
     );
 
@@ -126,54 +126,58 @@ export default function MoodleHeader() {
         
         <div className="h-8 w-[1px] bg-blue-300/30 mx-2"></div>
 
-        <div className="relative">
-          <button 
-            onClick={() => setShowDropdown(!showDropdown)}
-            className="flex items-center gap-2 hover:bg-blue-600 p-1 pr-2 rounded-lg transition-colors group"
-          >
-            <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center text-xs font-semibold overflow-hidden">
-              {activePersona.initials}
-            </div>
-            <span className="text-sm font-medium hidden sm:block">{activePersona.name}</span>
-            <ChevronDown size={16} className={`text-blue-200 transition-transform ${showDropdown ? 'rotate-180' : ''}`} />
-          </button>
+        {process.env.NODE_ENV === 'development' && (
+          <>
+            <div className="relative">
+              <button 
+                onClick={() => setShowDropdown(!showDropdown)}
+                className="flex items-center gap-2 hover:bg-blue-600 p-1 pr-2 rounded-lg transition-colors group"
+              >
+                <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center text-xs font-semibold overflow-hidden">
+                  {activePersona.initials}
+                </div>
+                <span className="text-sm font-medium hidden sm:block">{activePersona.name}</span>
+                <ChevronDown size={16} className={`text-blue-200 transition-transform ${showDropdown ? 'rotate-180' : ''}`} />
+              </button>
 
-          {showDropdown && (
-            <div className="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-2xl py-2 text-gray-800 border border-gray-100 animate-in fade-in slide-in-from-top-2 duration-200">
-              <div className="px-4 py-2 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Switch User</div>
-              {personas.map((p) => (
-                <button
-                  key={p.name}
-                  onClick={() => {
-                    setActivePersona(p);
-                    setShowDropdown(false);
-                  }}
-                  className={`w-full text-left px-4 py-3 flex items-center gap-3 hover:bg-blue-50 transition-colors ${activePersona.name === p.name ? 'bg-blue-50 text-[#4a90e2]' : ''}`}
-                >
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-bold ${activePersona.name === p.name ? 'bg-[#4a90e2] text-white' : 'bg-gray-100 text-gray-600'}`}>
-                    {p.initials}
+              {showDropdown && (
+                <div className="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-2xl py-2 text-gray-800 border border-gray-100 animate-in fade-in slide-in-from-top-2 duration-200">
+                  <div className="px-4 py-2 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Switch User</div>
+                  {personas.map((p) => (
+                    <button
+                      key={p.name}
+                      onClick={() => {
+                        setActivePersona(p);
+                        setShowDropdown(false);
+                      }}
+                      className={`w-full text-left px-4 py-3 flex items-center gap-3 hover:bg-blue-50 transition-colors ${activePersona.name === p.name ? 'bg-blue-50 text-[#4a90e2]' : ''}`}
+                    >
+                      <div className={`w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-bold ${activePersona.name === p.name ? 'bg-[#4a90e2] text-white' : 'bg-gray-100 text-gray-600'}`}>
+                        {p.initials}
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="text-sm font-semibold leading-none">{p.name}</span>
+                        <span className="text-[10px] opacity-70 mt-1 capitalize">{p.role === 'admin' ? 'IT Administrator' : p.role}</span>
+                      </div>
+                    </button>
+                  ))}
+                  <div className="border-t border-gray-100 mt-2 pt-2">
+                    <button className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2">
+                      Log out
+                    </button>
                   </div>
-                  <div className="flex flex-col">
-                    <span className="text-sm font-semibold leading-none">{p.name}</span>
-                    <span className="text-[10px] opacity-70 mt-1 capitalize">{p.role === 'admin' ? 'IT Administrator' : p.role}</span>
-                  </div>
-                </button>
-              ))}
-              <div className="border-t border-gray-100 mt-2 pt-2">
-                <button className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2">
-                  Log out
-                </button>
+                </div>
+              )}
+            </div>
+
+            <div className="hidden lg:flex items-center gap-2 ml-4">
+              <span className="text-xs text-blue-100 uppercase font-bold tracking-wider">Edit mode</span>
+              <div className="w-10 h-5 bg-blue-800 rounded-full relative cursor-pointer shadow-inner">
+                 <div className={`absolute transition-all duration-200 top-1 w-3 h-3 bg-white rounded-full ${activePersona.role === 'student' ? 'left-1' : 'left-6 bg-blue-400'}`}></div>
               </div>
             </div>
-          )}
-        </div>
-
-        <div className="hidden lg:flex items-center gap-2 ml-4">
-          <span className="text-xs text-blue-100 uppercase font-bold tracking-wider">Edit mode</span>
-          <div className="w-10 h-5 bg-blue-800 rounded-full relative cursor-pointer shadow-inner">
-             <div className={`absolute transition-all duration-200 top-1 w-3 h-3 bg-white rounded-full ${activePersona.role === 'student' ? 'left-1' : 'left-6 bg-blue-400'}`}></div>
-          </div>
-        </div>
+          </>
+        )}
       </div>
     </header>
   );

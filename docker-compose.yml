@@ -1,6 +1,24 @@
-version: '3.9'
-
 services:
+  # ─── Database ─────────────────────────────────────────
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: assessly
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - assessly-net
+
   # ─── Flask Backend API ────────────────────────────────
   backend:
     build:
@@ -13,14 +31,17 @@ services:
       - FLASK_ENV=development
       - SECRET_KEY=assessly-secret-key-dev
       - JWT_SECRET_KEY=assessly-jwt-secret-dev
-      - DATABASE_URL=sqlite:///assessly.db
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/assessly
       - SANDBOX_TIME_LIMIT=10
       - SANDBOX_MEMORY_LIMIT=256
     volumes:
       - ./backend:/app
-      - /var/run/docker.sock:/var/run/docker.sock  # For Docker-in-Docker sandbox
+      - /var/run/docker.sock:/var/run/docker.sock
     depends_on:
-      - sandbox-python
+      db:
+        condition: service_healthy
+      sandbox-python:
+        condition: service_started
     restart: unless-stopped
     networks:
       - assessly-net
@@ -47,22 +68,31 @@ services:
       context: ./docker/sandbox-python
     image: assessly-sandbox-python
     container_name: assessly-sandbox-python-build
-    entrypoint: ["echo", "Python sandbox image built successfully"]
+    entrypoint: [ "echo", "Python sandbox image built successfully" ]
+    networks:
+      - assessly-net
 
   sandbox-java:
     build:
       context: ./docker/sandbox-java
     image: assessly-sandbox-java
     container_name: assessly-sandbox-java-build
-    entrypoint: ["echo", "Java sandbox image built successfully"]
+    entrypoint: [ "echo", "Java sandbox image built successfully" ]
+    networks:
+      - assessly-net
 
   sandbox-c:
     build:
       context: ./docker/sandbox-c
     image: assessly-sandbox-c
     container_name: assessly-sandbox-c-build
-    entrypoint: ["echo", "C sandbox image built successfully"]
+    entrypoint: [ "echo", "C sandbox image built successfully" ]
+    networks:
+      - assessly-net
 
 networks:
   assessly-net:
     driver: bridge
+
+volumes:
+  pgdata:

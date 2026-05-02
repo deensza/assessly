@@ -1,8 +1,39 @@
 "use client";
 
-import { Database, Activity, Server, ShieldCheck, HardDrive, Cpu, Search, Trash2, Download, Terminal } from "lucide-react";
+import { useState, useEffect } from "react";
+import { adminApi } from "@/lib/api";
+import { Database, Activity, Server, ShieldCheck, HardDrive, Cpu, Search, Trash2, Download, Terminal, Loader2 } from "lucide-react";
 
 export default function AdminDashboard() {
+  const [config, setConfig] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function fetchData() {
+      try {
+        setLoading(true);
+        const data = await adminApi.getSandboxConfig();
+        setConfig(data);
+      } catch (err) {
+        setError('Veriler yüklenemedi');
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchData();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="flex-1 flex items-center justify-center p-12 bg-[#f4f7f9] h-[calc(100vh-60px)]">
+        <div className="animate-pulse flex flex-col items-center">
+          <Loader2 size={48} className="animate-spin text-[#4a90e2] mb-4" />
+          <p className="text-gray-500 font-medium">Yükleniyor...</p>
+        </div>
+      </div>
+    );
+  }
   return (
     <div className="flex-1 flex flex-col bg-[#f4f7f9] p-8">
       {/* Page Header */}
@@ -28,8 +59,8 @@ export default function AdminDashboard() {
             <Server size={24} />
           </div>
           <div>
-            <div className="text-xs font-bold text-gray-400 uppercase tracking-widest">Active Sandboxes</div>
-            <div className="text-xl font-bold text-gray-900">12 Running</div>
+            <div className="text-xs font-bold text-gray-400 uppercase tracking-widest">Sandbox Config</div>
+            <div className="text-xl font-bold text-gray-900">{config?.max_containers || 0} Max Containers</div>
           </div>
         </div>
 
