@@ -7,7 +7,6 @@ export default function AdminSandbox() {
   const [config, setConfig] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
   const containers = [
     { id: "cnt-881", name: "python-grader-01", status: "Running", cpu: "1.2%", ram: "45MB", uptime: "2d 4h" },
     { id: "cnt-882", name: "python-grader-02", status: "Running", cpu: "0.5%", ram: "42MB", uptime: "2d 4h" },
@@ -17,94 +16,70 @@ export default function AdminSandbox() {
 
   useEffect(() => {
     async function fetchData() {
-      try {
-        setLoading(true);
-        const data = await adminApi.getSandboxConfig();
-        setConfig(data);
-      } catch (err) {
-        setError('Sandbox konfigürasyonu yüklenemedi');
-      } finally {
-        setLoading(false);
-      }
+      try { setLoading(true); const data = await adminApi.getSandboxConfig(); setConfig(data); }
+      catch (err) { setError('Sandbox konfigürasyonu yüklenemedi'); }
+      finally { setLoading(false); }
     }
     fetchData();
   }, []);
 
   const handleSave = async () => {
     if (!config) return;
-    try {
-      await adminApi.updateSandboxConfig(config);
-      alert('Sandbox ayarları kaydedildi');
-    } catch (err) {
-      setError('Kaydedilirken hata oluştu');
-    }
+    try { await adminApi.updateSandboxConfig(config); alert('Sandbox ayarları kaydedildi'); }
+    catch (err) { setError('Kaydedilirken hata oluştu'); }
   };
 
-  if (loading) {
-    return (
-      <div className="flex-1 flex items-center justify-center p-12 h-screen bg-[#0f172a]">
-        <div className="animate-pulse flex flex-col items-center">
-          <Loader2 size={48} className="animate-spin text-blue-500 mb-4" />
-          <p className="text-slate-400 font-medium">Yükleniyor...</p>
-        </div>
-      </div>
-    );
-  }
+  if (loading) return (
+    <div className="flex-1 flex items-center justify-center p-12 bg-[#f0f4f8]">
+      <div className="flex flex-col items-center"><Loader2 size={48} className="animate-spin text-[#ff9800] mb-4" /><p className="text-gray-500 font-medium">Loading...</p></div>
+    </div>
+  );
 
   return (
-    <div className="p-8 space-y-8 bg-[#0f172a] min-h-screen text-slate-200">
+    <div className="p-8 space-y-8 bg-[#f0f4f8] min-h-full animate-fade-in-up">
       <div className="flex justify-between items-end">
         <div>
-          <h1 className="text-3xl font-bold text-white tracking-tight">Docker Sandbox Manager</h1>
-          <p className="text-slate-400 mt-1">Monitor and manage the isolated execution environments.</p>
+          <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">Docker Sandbox Manager</h1>
+          <p className="text-gray-500 mt-1 font-medium">Monitor and manage the isolated execution environments.</p>
         </div>
-        <button className="flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg font-bold transition-all shadow-lg shadow-blue-600/20">
-          <RefreshCw size={18} /> Prune Unused
+        <button className="flex items-center gap-2 bg-gradient-to-r from-[#4a90e2] to-[#357abd] text-white px-5 py-2.5 rounded-xl font-semibold transition-all shadow-lg shadow-blue-200/50 text-sm">
+          <RefreshCw size={16} /> Prune Unused
         </button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-slate-800/50 p-6 rounded-2xl border border-slate-700/50 flex items-center gap-4">
-           <div className="w-12 h-12 bg-blue-500/20 text-blue-400 rounded-xl flex items-center justify-center"><Box size={24} /></div>
-           <div><p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Active Nodes</p><p className="text-2xl font-bold text-white">4 / 8</p></div>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 stagger-children">
+        <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex items-center gap-4 hover:shadow-md transition-all group animate-fade-in-up">
+          <div className="w-12 h-12 bg-[#e8f1fb] text-[#4a90e2] rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform"><Box size={24} /></div>
+          <div><p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Active Nodes</p><p className="text-2xl font-extrabold text-gray-900">4 / 8</p></div>
         </div>
-        <div className="bg-slate-800/50 p-6 rounded-2xl border border-slate-700/50 flex items-center gap-4">
-           <div className="w-12 h-12 bg-purple-500/20 text-purple-400 rounded-xl flex items-center justify-center"><Cpu size={24} /></div>
-           <div><p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Total Cluster CPU</p><p className="text-2xl font-bold text-white">16.4%</p></div>
+        <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex items-center gap-4 hover:shadow-md transition-all group animate-fade-in-up">
+          <div className="w-12 h-12 bg-purple-50 text-purple-500 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform"><Cpu size={24} /></div>
+          <div><p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Total Cluster CPU</p><p className="text-2xl font-extrabold text-gray-900">16.4%</p></div>
         </div>
-        <div className="bg-slate-800/50 p-6 rounded-2xl border border-slate-700/50 flex items-center gap-4">
-           <div className="w-12 h-12 bg-amber-500/20 text-amber-400 rounded-xl flex items-center justify-center"><HardDrive size={24} /></div>
-           <div><p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Storage Used</p><p className="text-2xl font-bold text-white">2.4 GB</p></div>
+        <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex items-center gap-4 hover:shadow-md transition-all group animate-fade-in-up">
+          <div className="w-12 h-12 bg-orange-50 text-[#ff9800] rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform"><HardDrive size={24} /></div>
+          <div><p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Storage Used</p><p className="text-2xl font-extrabold text-gray-900">2.4 GB</p></div>
         </div>
       </div>
 
-      <div className="bg-slate-800/40 rounded-2xl border border-slate-700/50 overflow-hidden backdrop-blur-sm">
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
         <table className="w-full text-left border-collapse">
           <thead>
-            <tr className="border-b border-slate-700 bg-slate-900/50 text-[10px] text-slate-500 uppercase font-bold tracking-widest">
-              <th className="px-8 py-4">Container ID</th>
-              <th className="px-8 py-4">Name</th>
-              <th className="px-8 py-4">Status</th>
-              <th className="px-8 py-4">CPU</th>
-              <th className="px-8 py-4">RAM</th>
-              <th className="px-8 py-4">Uptime</th>
+            <tr className="border-b border-gray-50 bg-gray-50/50 text-[10px] text-gray-400 uppercase font-bold tracking-widest">
+              <th className="px-6 py-4">Container ID</th><th className="px-6 py-4">Name</th><th className="px-6 py-4">Status</th><th className="px-6 py-4">CPU</th><th className="px-6 py-4">RAM</th><th className="px-6 py-4">Uptime</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-800 text-sm">
+          <tbody className="divide-y divide-gray-50 text-sm">
             {containers.map(cnt => (
-              <tr key={cnt.id} className="hover:bg-slate-800/30 transition-colors">
-                <td className="px-8 py-5 font-mono text-blue-400">{cnt.id}</td>
-                <td className="px-8 py-5 text-slate-300 font-bold">{cnt.name}</td>
-                <td className="px-8 py-5">
-                   <span className={`px-2 py-1 rounded text-[10px] font-bold uppercase tracking-tight ${
-                     cnt.status === 'Running' ? 'bg-green-500/10 text-green-400' : 'bg-slate-700 text-slate-400'
-                   }`}>
-                      {cnt.status}
-                   </span>
+              <tr key={cnt.id} className="hover:bg-blue-50/30 transition-colors">
+                <td className="px-6 py-5 font-mono text-[#4a90e2] text-xs">{cnt.id}</td>
+                <td className="px-6 py-5 text-gray-800 font-bold">{cnt.name}</td>
+                <td className="px-6 py-5">
+                  <span className={`px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase border ${cnt.status === 'Running' ? 'bg-green-50 text-green-600 border-green-100' : 'bg-gray-50 text-gray-500 border-gray-200'}`}>{cnt.status}</span>
                 </td>
-                <td className="px-8 py-5 font-mono text-slate-400">{cnt.cpu}</td>
-                <td className="px-8 py-5 font-mono text-slate-400">{cnt.ram}</td>
-                <td className="px-8 py-5 text-slate-500">{cnt.uptime}</td>
+                <td className="px-6 py-5 font-mono text-gray-500">{cnt.cpu}</td>
+                <td className="px-6 py-5 font-mono text-gray-500">{cnt.ram}</td>
+                <td className="px-6 py-5 text-gray-400">{cnt.uptime}</td>
               </tr>
             ))}
           </tbody>

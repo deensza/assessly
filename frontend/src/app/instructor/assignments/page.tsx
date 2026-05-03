@@ -10,18 +10,18 @@ export default function InstructorAssignments() {
   ];
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 animate-fade-in-up">
       <div className="flex justify-between items-end">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 tracking-tight">Assignments Management</h1>
-          <p className="text-gray-500 mt-1">Review and manage all programming assessments across your courses.</p>
+          <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">Assignments Management</h1>
+          <p className="text-gray-500 mt-1 font-medium">Review and manage all programming assessments across your courses.</p>
         </div>
         <div className="flex items-center gap-3">
           <div className="relative">
-            <Search className="absolute left-3 top-2.5 text-gray-400" size={16} />
-            <input type="text" placeholder="Search assignments..." className="pl-10 pr-4 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#4a90e2]" />
+            <Search className="absolute left-3.5 top-2.5 text-gray-400" size={16} />
+            <input type="text" placeholder="Search assignments..." className="pl-10 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#4a90e2]/30 focus:border-[#4a90e2] bg-white shadow-sm transition-all" />
           </div>
-          <button className="p-2 border border-gray-200 rounded-xl hover:bg-white transition-colors"><Filter size={18} className="text-gray-600" /></button>
+          <button className="p-2.5 border border-gray-200 rounded-xl hover:bg-white transition-all shadow-sm hover:shadow-md"><Filter size={18} className="text-gray-600" /></button>
         </div>
       </div>
 
@@ -29,31 +29,31 @@ export default function InstructorAssignments() {
         <table className="w-full text-left border-collapse">
           <thead>
             <tr className="border-b border-gray-50 bg-gray-50/50 text-[10px] text-gray-400 uppercase font-bold tracking-widest">
-              <th className="px-8 py-4">Title</th>
-              <th className="px-8 py-4">Course</th>
-              <th className="px-8 py-4 text-center">Submissions</th>
-              <th className="px-8 py-4 text-center">Avg Score</th>
-              <th className="px-8 py-4">Status</th>
-              <th className="px-8 py-4"></th>
+              <th className="px-6 py-4">Title</th>
+              <th className="px-6 py-4">Course</th>
+              <th className="px-6 py-4 text-center">Submissions</th>
+              <th className="px-6 py-4 text-center">Avg Score</th>
+              <th className="px-6 py-4">Status</th>
+              <th className="px-6 py-4"></th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-50 text-sm">
             {assignments.map(item => (
-              <tr key={item.id} className="hover:bg-gray-50/50 transition-colors">
-                <td className="px-8 py-5 font-bold text-gray-800">{item.title}</td>
-                <td className="px-8 py-5 text-gray-500">{item.course}</td>
-                <td className="px-8 py-5 text-center font-mono text-gray-600">{item.submissions}</td>
-                <td className="px-8 py-5 text-center font-bold text-[#4a90e2]">{item.avgScore}</td>
-                <td className="px-8 py-5">
-                  <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-tight flex items-center gap-1.5 w-fit ${
-                    item.status === 'Completed' ? 'bg-green-50 text-green-700' : 'bg-blue-50 text-[#4a90e2]'
+              <tr key={item.id} className="hover:bg-blue-50/30 transition-colors">
+                <td className="px-6 py-5 font-bold text-gray-800">{item.title}</td>
+                <td className="px-6 py-5 text-gray-500">{item.course}</td>
+                <td className="px-6 py-5 text-center font-mono text-gray-600">{item.submissions}</td>
+                <td className="px-6 py-5 text-center font-bold text-[#4a90e2]">{item.avgScore}</td>
+                <td className="px-6 py-5">
+                  <span className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-tight flex items-center gap-1.5 w-fit border ${
+                    item.status === 'Completed' ? 'bg-green-50 text-green-700 border-green-100' : 'bg-[#e8f1fb] text-[#4a90e2] border-[#4a90e2]/10'
                   }`}>
                     {item.status === 'Completed' ? <CheckCircle2 size={12} /> : <Clock size={12} />}
                     {item.status}
                   </span>
                 </td>
-                <td className="px-8 py-5 text-right">
-                  <button className="p-1 hover:bg-gray-100 rounded-md text-gray-400"><MoreVertical size={16} /></button>
+                <td className="px-6 py-5 text-right">
+                  <button className="p-2 hover:bg-gray-100 rounded-xl text-gray-400 transition-colors"><MoreVertical size={16} /></button>
                 </td>
               </tr>
             ))}

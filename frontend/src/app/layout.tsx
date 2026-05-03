@@ -1,12 +1,13 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
-import MoodleHeader from "@/components/layout/MoodleHeader";
+import HeaderWrapper from "@/components/layout/HeaderWrapper";
 import { Providers } from "./providers";
 
 const inter = Inter({
   variable: "--font-inter",
   subsets: ["latin"],
+  weight: ["300", "400", "500", "600", "700", "800", "900"],
 });
 
 export const metadata: Metadata = {
@@ -24,9 +25,9 @@ export default function RootLayout({
       lang="en"
       className={`${inter.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col pt-[60px] bg-[var(--background)] font-sans">
+      <body className="min-h-full flex flex-col bg-[var(--background)] font-sans">
         <Providers>
-          <MoodleHeader />
+          <HeaderWrapper />
           <main className="flex-1 flex flex-col">{children}</main>
         </Providers>
       </body>
