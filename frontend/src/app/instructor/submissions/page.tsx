@@ -2,7 +2,7 @@
 
 import { Suspense, useEffect, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { submissionsApi } from "@/lib/api";
+import { submissionsApi, adminApi } from "@/lib/api";
 import {
   ArrowLeft,
   CheckCircle2,
@@ -14,6 +14,7 @@ import {
   Eye,
   Filter,
   Users,
+  UploadCloud,
 } from "lucide-react";
 
 type SubmissionSummary = {
@@ -46,6 +47,34 @@ function InstructorSubmissionsContent() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [showFlaggedOnly, setShowFlaggedOnly] = useState(false);
+  const [syncingAll, setSyncingAll] = useState(false);
+  const [syncAllMessage, setSyncAllMessage] = useState<{type: 'success'|'error', text: string} | null>(null);
+
+  const handleSyncAllGrades = async () => {
+    const completedSubs = submissions.filter(s => s.status === "completed" && s.final_score !== null);
+    if (completedSubs.length === 0) {
+      setSyncAllMessage({type: 'error', text: 'No completed grades to sync.'});
+      setTimeout(() => setSyncAllMessage(null), 3000);
+      return;
+    }
+    try {
+      setSyncingAll(true);
+      setSyncAllMessage(null);
+      let successCount = 0;
+      for (const sub of completedSubs) {
+        try {
+          await adminApi.syncGradeToMoodle(sub.assignment_id, sub.student_id, sub.final_score || 0, "Bulk Sync by Assessly");
+          successCount++;
+        } catch (e) {
+          console.error(`Failed to sync sub ${sub.id}`);
+        }
+      }
+      setSyncAllMessage({type: 'success', text: `Synced ${successCount}/${completedSubs.length} grades!`});
+      setTimeout(() => setSyncAllMessage(null), 4000);
+    } finally {
+      setSyncingAll(false);
+    }
+  };
 
   useEffect(() => {
     if (!assignmentId) {
@@ -103,17 +132,28 @@ function InstructorSubmissionsContent() {
             Assignment #{assignmentId} • {submissions.length} submissions
           </p>
         </div>
-        <button
-          onClick={() => setShowFlaggedOnly(!showFlaggedOnly)}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold transition-all border ${
-            showFlaggedOnly
-              ? "bg-red-50 border-red-200 text-red-600 shadow-sm"
-              : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50 shadow-sm"
-          }`}
-        >
-          <Filter size={16} />
-          {showFlaggedOnly ? "Showing Flagged" : "All Submissions"}
-        </button>
+        <div className="flex items-center gap-3">
+          {syncAllMessage && <span className={`text-xs font-bold ${syncAllMessage.type === 'success' ? 'text-green-600' : 'text-red-500'}`}>{syncAllMessage.text}</span>}
+          <button
+            onClick={handleSyncAllGrades}
+            disabled={syncingAll}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold transition-all border bg-[#e8f1fb] border-[#4a90e2]/20 text-[#4a90e2] hover:bg-[#d6e6f9] shadow-sm disabled:opacity-50"
+          >
+            {syncingAll ? <Loader2 size={16} className="animate-spin" /> : <UploadCloud size={16} />}
+            Sync All to Moodle
+          </button>
+          <button
+            onClick={() => setShowFlaggedOnly(!showFlaggedOnly)}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold transition-all border ${
+              showFlaggedOnly
+                ? "bg-red-50 border-red-200 text-red-600 shadow-sm"
+                : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50 shadow-sm"
+            }`}
+          >
+            <Filter size={16} />
+            {showFlaggedOnly ? "Showing Flagged" : "All Submissions"}
+          </button>
+        </div>
       </div>
 
       {error && (

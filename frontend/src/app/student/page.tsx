@@ -43,6 +43,7 @@ export default function StudentPortal() {
   const [mySubmissions, setMySubmissions] = useState<Submission[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [studentSearchQuery, setStudentSearchQuery] = useState("");
 
   // Test run state
   const [testResults, setTestResults] = useState<TestResult[]>([]);
@@ -167,6 +168,11 @@ export default function StudentPortal() {
       submissionId: sub?.id || null
     };
   });
+
+  const filteredEnrichedAssignments = enrichedAssignments.filter(a => 
+    a.title.toLowerCase().includes(studentSearchQuery.toLowerCase()) || 
+    a.course.toLowerCase().includes(studentSearchQuery.toLowerCase())
+  );
 
   if (loading) {
     return (
@@ -382,6 +388,8 @@ export default function StudentPortal() {
               <input 
                 type="text" 
                 placeholder="Search tasks..." 
+                value={studentSearchQuery}
+                onChange={(e) => setStudentSearchQuery(e.target.value)}
                 className="pl-11 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#4a90e2]/30 focus:border-[#4a90e2] shadow-sm w-64 transition-all"
               />
             </div>
@@ -393,7 +401,7 @@ export default function StudentPortal() {
 
         {/* Assignment Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 stagger-children">
-          {enrichedAssignments.map((task) => (
+          {filteredEnrichedAssignments.map((task) => (
             <div 
               key={task.id} 
               className="group bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 overflow-hidden flex flex-col animate-fade-in-up"
@@ -440,6 +448,20 @@ export default function StudentPortal() {
               </button>
             </div>
           ))}
+          {filteredEnrichedAssignments.length === 0 && (
+            <div className="col-span-full py-20 text-center">
+              <div className="flex flex-col items-center gap-4">
+                <Search size={48} className="text-gray-200" />
+                <p className="text-gray-500 font-medium text-lg">No assignments found matching "{studentSearchQuery}"</p>
+                <button 
+                  onClick={() => setStudentSearchQuery("")}
+                  className="text-[#4a90e2] font-bold hover:underline"
+                >
+                  Clear search
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

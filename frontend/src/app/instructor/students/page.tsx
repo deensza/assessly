@@ -1,14 +1,26 @@
 "use client";
+import { useState } from "react";
 import { Users, Search, Mail, Award, AlertTriangle, CheckCircle2 } from "lucide-react";
 
 export default function InstructorStudents() {
+  const [searchQuery, setSearchQuery] = useState("");
+
   const students = [
-    { id: 1, name: "Deniz Akkaya", idNum: "2021001", completed: 12, avgGrade: "88%", status: "On Track" },
-    { id: 2, name: "Ali Sezgin", idNum: "2021045", completed: 11, avgGrade: "94%", status: "On Track" },
-    { id: 3, name: "Ayşe Yılmaz", idNum: "2021089", completed: 8, avgGrade: "62%", status: "At Risk" },
-    { id: 4, name: "Mehmet Demir", idNum: "2021102", completed: 12, avgGrade: "79%", status: "On Track" },
-    { id: 5, name: "Zeynep Kaya", idNum: "2021156", completed: 5, avgGrade: "45%", status: "At Risk" },
+    { id: 1, name: "Deniz Akkaya", idNum: "2021001", completed: 12, avgGrade: "88%", status: "On Track", email: "deniz.akkaya@yasar.edu.tr" },
+    { id: 2, name: "Ali Sezgin", idNum: "2021045", completed: 11, avgGrade: "94%", status: "On Track", email: "ali.sezgin@yasar.edu.tr" },
+    { id: 3, name: "Ayşe Yılmaz", idNum: "2021089", completed: 8, avgGrade: "62%", status: "At Risk", email: "ayse.yilmaz@yasar.edu.tr" },
+    { id: 4, name: "Mehmet Demir", idNum: "2021102", completed: 12, avgGrade: "79%", status: "On Track", email: "mehmet.demir@yasar.edu.tr" },
+    { id: 5, name: "Zeynep Kaya", idNum: "2021156", completed: 5, avgGrade: "45%", status: "At Risk", email: "zeynep.kaya@yasar.edu.tr" },
   ];
+
+  const filteredStudents = students.filter(s => 
+    s.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+    s.idNum.includes(searchQuery)
+  );
+
+  const handleMailClick = (student: any) => {
+    alert(`Sending secure internal message to: ${student.email}\n\nNote: This message will be logged for academic integrity monitoring.`);
+  };
 
   return (
     <div className="space-y-8 animate-fade-in-up">
@@ -19,7 +31,13 @@ export default function InstructorStudents() {
         </div>
         <div className="relative">
           <Search className="absolute left-3.5 top-2.5 text-gray-400" size={16} />
-          <input type="text" placeholder="Search students..." className="pl-10 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#4a90e2]/30 focus:border-[#4a90e2] bg-white w-64 shadow-sm transition-all" />
+          <input 
+            type="text" 
+            placeholder="Search students..." 
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-10 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#4a90e2]/30 focus:border-[#4a90e2] bg-white w-64 shadow-sm transition-all" 
+          />
         </div>
       </div>
 
@@ -51,7 +69,7 @@ export default function InstructorStudents() {
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-50 text-sm">
-            {students.map(student => (
+            {filteredStudents.map(student => (
               <tr key={student.id} className="hover:bg-blue-50/30 transition-colors">
                 <td className="px-6 py-5">
                    <div className="font-bold text-gray-800">{student.name}</div>
@@ -68,10 +86,23 @@ export default function InstructorStudents() {
                    </span>
                 </td>
                 <td className="px-6 py-5 text-right">
-                   <button className="p-2 hover:bg-gray-100 rounded-xl text-gray-400 transition-colors" title="Contact Student"><Mail size={16} /></button>
+                   <button 
+                    onClick={() => handleMailClick(student)}
+                    className="p-2 hover:bg-gray-100 rounded-xl text-gray-400 transition-colors" 
+                    title="Contact Student"
+                  >
+                    <Mail size={16} />
+                  </button>
                 </td>
               </tr>
             ))}
+            {filteredStudents.length === 0 && (
+              <tr>
+                <td colSpan={6} className="px-6 py-12 text-center text-gray-400 font-medium">
+                  No students match your search query.
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>

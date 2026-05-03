@@ -1,11 +1,13 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { ShieldCheck, Mail, Lock, User, ArrowRight, GraduationCap, Landmark, Database, Loader2, Sparkles, BookOpen, Code2 } from "lucide-react";
 
-export default function LoginPage() {
+import { Suspense } from "react";
+
+function LoginContent() {
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -15,6 +17,14 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const { login, register, user, isAuthenticated } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
+
+  useEffect(() => {
+    const urlRole = searchParams.get("role");
+    if (urlRole && ["student", "instructor", "admin"].includes(urlRole)) {
+      setRole(urlRole);
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     if (isAuthenticated && user) {
@@ -278,5 +288,13 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><Loader2 className="animate-spin w-8 h-8 text-blue-500" /></div>}>
+      <LoginContent />
+    </Suspense>
   );
 }

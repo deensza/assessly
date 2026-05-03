@@ -87,7 +87,7 @@ export function setStoredUser(user: User): void {
 }
 
 // === Axios Instance ===
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001/api';
 
 const api: AxiosInstance = axios.create({
   baseURL: API_BASE,
@@ -232,10 +232,11 @@ export const adminApi = {
     const res = await api.get('/admin/moodle/config');
     return res.data;
   },
-  async saveMoodleConfig(apiUrl: string, token: string) {
+  async saveMoodleConfig(apiUrl: string, token: string, enabled: boolean) {
     const res = await api.put('/admin/moodle/config', {
       api_url: apiUrl,
       token,
+      enabled,
     });
     return res.data;
   },
@@ -243,6 +244,15 @@ export const adminApi = {
     const res = await api.post('/admin/moodle/test', {
       api_url: apiUrl,
       token,
+    });
+    return res.data;
+  },
+  async syncGradeToMoodle(moodle_assignment_id: number, moodle_user_id: number, grade: number, feedback: string = '') {
+    const res = await api.post('/admin/moodle/sync-grade', {
+      moodle_assignment_id,
+      moodle_user_id,
+      grade,
+      feedback
     });
     return res.data;
   },

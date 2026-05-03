@@ -26,7 +26,7 @@ services:
       dockerfile: Dockerfile
     container_name: assessly-backend
     ports:
-      - "5000:5000"
+      - "5001:5000"
     environment:
       - FLASK_ENV=development
       - SECRET_KEY=assessly-secret-key-dev
@@ -55,7 +55,7 @@ services:
     ports:
       - "3000:3000"
     environment:
-      - NEXT_PUBLIC_API_URL=http://localhost:5000/api
+      - NEXT_PUBLIC_API_URL=http://localhost:5001/api
     depends_on:
       - backend
     restart: unless-stopped
