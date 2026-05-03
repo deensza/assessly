@@ -105,7 +105,7 @@ export default function StudentPortal() {
       course: course?.title || 'Unknown Course',
       dueDate: new Date(a.due_date).toLocaleDateString(),
       status: sub ? 'Submitted' : 'Not Started',
-      grade: sub?.final_score !== null ? `${sub?.final_score?.toFixed(1)}/100` : null,
+      grade: sub && sub.final_score != null ? `${sub.final_score.toFixed(1)}/100` : null,
       description: a.description,
       initialCode: ""
     };

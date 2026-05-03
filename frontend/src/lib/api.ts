@@ -157,7 +157,7 @@ export const coursesApi = {
 export const assignmentsApi = {
   async list(courseId: number) {
     const res = await api.get(`/assignments/course/${courseId}`);
-    return res.data;
+    return Array.isArray(res.data) ? res.data : (res.data.assignments || []);
   },
   async create(data: {
     course_id: number;
