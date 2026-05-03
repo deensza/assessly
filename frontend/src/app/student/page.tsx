@@ -14,20 +14,41 @@ import {
   Filter, 
   ArrowRight,
   BookOpen,
-  AlertCircle
+  AlertCircle,
+  XCircle,
+  Loader2,
+  Lock,
+  Eye
 } from "lucide-react";
 import Link from "next/link";
+
+interface TestResult {
+  test_case_id: number;
+  input: string;
+  expected_output: string;
+  actual_output: string | null;
+  stderr: string | null;
+  passed: boolean;
+  error: string | null;
+}
 
 export default function StudentPortal() {
   const [view, setView] = useState<'dashboard' | 'workspace'>('dashboard');
   const [selectedAssignment, setSelectedAssignment] = useState<any>(null);
   const [code, setCode] = useState("");
+  const [isReadOnly, setIsReadOnly] = useState(false);
 
   const [courses, setCourses] = useState<Course[]>([]);
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [mySubmissions, setMySubmissions] = useState<Submission[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Test run state
+  const [testResults, setTestResults] = useState<TestResult[]>([]);
+  const [testSummary, setTestSummary] = useState<{total: number; passed: number; failed: number} | null>(null);
+  const [runningTests, setRunningTests] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     async function fetchData() {
@@ -77,22 +98,55 @@ export default function StudentPortal() {
     }
   };
 
-  const handleSubmit = async (assignmentId: number, code: string, language: string) => {
+  const handleRunTests = async () => {
+    if (!selectedAssignment || !code.trim()) return;
     try {
-      const result = await submissionsApi.submit(assignmentId, code, language);
-      setView('dashboard');
+      setRunningTests(true);
+      setTestResults([]);
+      setTestSummary(null);
+      const result = await submissionsApi.runTests(selectedAssignment.id, code, "python");
+      setTestResults(result.results || []);
+      setTestSummary(result.summary || null);
+    } catch (err: any) {
+      const msg = err?.response?.data?.error || 'Test çalıştırılırken hata oluştu';
+      setTestResults([]);
+      setTestSummary(null);
+      alert(msg);
+    } finally {
+      setRunningTests(false);
+    }
+  };
+
+  const handleSubmit = async (assignmentId: number, code: string, language: string) => {
+    if (!confirm("Are you sure you want to submit? You won't be able to modify your code after submission.")) return;
+    try {
+      setSubmitting(true);
+      await submissionsApi.submit(assignmentId, code, language);
       // Reload submissions
       const subsData = await submissionsApi.my();
       setMySubmissions(subsData.submissions || []);
-      alert("Submission successful!");
+      setView('dashboard');
+      alert("✅ Submission successful! Your code is being evaluated.");
     } catch (err) {
       setError('Kod gönderilirken hata oluştu');
+    } finally {
+      setSubmitting(false);
     }
   };
 
   const handleOpenAssignment = (assignment: any) => {
     setSelectedAssignment(assignment);
-    setCode(assignment.initialCode || "# Start coding here...");
+    setTestResults([]);
+    setTestSummary(null);
+    
+    // Check if already submitted
+    if (assignment.status === 'Submitted' && assignment.submittedCode) {
+      setCode(assignment.submittedCode);
+      setIsReadOnly(true);
+    } else {
+      setCode(assignment.initialCode || "# Start coding here...\n");
+      setIsReadOnly(false);
+    }
     setView('workspace');
   };
 
@@ -106,8 +160,11 @@ export default function StudentPortal() {
       dueDate: new Date(a.due_date).toLocaleDateString(),
       status: sub ? 'Submitted' : 'Not Started',
       grade: sub && sub.final_score != null ? `${sub.final_score.toFixed(1)}/100` : null,
+      gradeValue: sub?.final_score,
       description: a.description,
-      initialCode: ""
+      initialCode: "",
+      submittedCode: (sub as any)?.code || null,
+      submissionId: sub?.id || null
     };
   });
 
@@ -139,78 +196,161 @@ export default function StudentPortal() {
         {/* Workspace Header */}
         <div className="bg-white border-b border-gray-200 px-8 py-3 flex items-center justify-between shadow-sm">
           <div className="flex items-center gap-4">
-            <button onClick={() => setView('dashboard')} className="text-gray-400 hover:text-[#4a90e2] transition-colors p-2 hover:bg-gray-50 rounded-lg">
+            <button onClick={() => { setView('dashboard'); setTestResults([]); setTestSummary(null); }} className="text-gray-400 hover:text-[#4a90e2] transition-colors p-2 hover:bg-gray-50 rounded-lg">
               <ChevronLeft className="w-6 h-6"/>
             </button>
             <div className="flex flex-col">
-              <span className="font-bold text-gray-900">{selectedAssignment.title}</span>
+              <div className="flex items-center gap-3">
+                <span className="font-bold text-gray-900">{selectedAssignment.title}</span>
+                {isReadOnly && (
+                  <span className="flex items-center gap-1 px-2 py-0.5 bg-green-100 text-green-700 text-[10px] font-bold uppercase rounded-full">
+                    <Lock size={10} /> Submitted
+                  </span>
+                )}
+              </div>
               <div className="flex items-center gap-2 text-[10px] text-gray-500 font-bold uppercase tracking-wider">
                  <span>{selectedAssignment.course}</span>
                  <ChevronRight size={10} />
-                 <span className="text-[#4a90e2]">Assignment Workspace</span>
+                 <span className="text-[#4a90e2]">{isReadOnly ? 'Review Mode' : 'Assignment Workspace'}</span>
               </div>
             </div>
           </div>
           <div className="flex items-center space-x-3">
-            <button className="px-4 py-2 bg-white border border-gray-200 rounded-xl text-sm font-bold hover:bg-gray-50 transition-colors flex items-center shadow-sm text-gray-700">
-              <Play className="w-4 h-4 mr-2 text-[#4a90e2]"/> Run Tests
-            </button>
-            <button 
-              onClick={() => handleSubmit(selectedAssignment.id, code, "python")}
-              className="px-4 py-2 bg-[#4a90e2] hover:bg-[#357abd] text-white rounded-xl text-sm font-bold transition-colors flex items-center shadow-lg shadow-blue-500/20"
-            >
-              <CheckCircle2 className="w-4 h-4 mr-2"/> Submit Solution
-            </button>
+            {isReadOnly ? (
+              <>
+                {selectedAssignment.grade && (
+                  <div className="flex items-center gap-2 px-4 py-2 bg-green-50 border border-green-200 rounded-xl">
+                    <Award size={16} className="text-green-600" />
+                    <span className="text-sm font-bold text-green-700">Grade: {selectedAssignment.grade}</span>
+                  </div>
+                )}
+                <div className="flex items-center gap-2 px-4 py-2 bg-gray-100 rounded-xl text-sm text-gray-500 font-medium">
+                  <Eye size={16} /> Read-only
+                </div>
+              </>
+            ) : (
+              <>
+                <button
+                  onClick={handleRunTests}
+                  disabled={runningTests || !code.trim()}
+                  className="px-4 py-2 bg-white border border-gray-200 rounded-xl text-sm font-bold hover:bg-gray-50 transition-colors flex items-center shadow-sm text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {runningTests ? (
+                    <><Loader2 className="w-4 h-4 mr-2 text-[#4a90e2] animate-spin"/> Running...</>
+                  ) : (
+                    <><Play className="w-4 h-4 mr-2 text-[#4a90e2]"/> Run Tests</>
+                  )}
+                </button>
+                <button 
+                  onClick={() => handleSubmit(selectedAssignment.id, code, "python")}
+                  disabled={submitting || !code.trim()}
+                  className="px-4 py-2 bg-[#4a90e2] hover:bg-[#357abd] text-white rounded-xl text-sm font-bold transition-colors flex items-center shadow-lg shadow-blue-500/20 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {submitting ? (
+                    <><Loader2 className="w-4 h-4 mr-2 animate-spin"/> Submitting...</>
+                  ) : (
+                    <><CheckCircle2 className="w-4 h-4 mr-2"/> Submit Solution</>
+                  )}
+                </button>
+              </>
+            )}
           </div>
         </div>
 
         <div className="flex flex-1 overflow-hidden">
-          <div className="w-1/3 min-w-[380px] bg-white p-8 overflow-y-auto border-r border-gray-100 shadow-inner">
-            <div className="flex items-center gap-3 mb-8 border-b border-gray-50 pb-6">
-              <div className="p-3 bg-blue-50 text-[#4a90e2] rounded-2xl">
-                <FileCode2 className="w-6 h-6"/>
-              </div>
-              <h2 className="text-xl font-extrabold text-gray-900 tracking-tight">Instructions</h2>
-            </div>
-
-            <div className="prose prose-slate prose-sm max-w-none text-gray-600 space-y-4 leading-relaxed">
-              <p>{selectedAssignment.description}</p>
-              <div className="bg-blue-50/50 border border-blue-100/50 p-6 rounded-2xl mt-6">
-                <h4 className="font-bold text-[#4a90e2] mb-3 text-xs uppercase tracking-widest flex items-center gap-2">
-                   <AlertCircle size={14} /> Constraints:
-                </h4>
-                <ul className="text-xs space-y-2 list-disc pl-4 text-blue-800/70 italic font-medium">
-                  <li>Time complexity: O(n log n)</li>
-                  <li>Space complexity: O(n)</li>
-                  <li>In-place memory limits: 512MB</li>
-                </ul>
-              </div>
-            </div>
-
-            <div className="mt-12 pt-8 border-t border-gray-50">
-              <h3 className="font-bold text-xs mb-6 flex items-center uppercase tracking-widest text-gray-400">
-                <Award className="w-4 h-4 mr-2"/> Evaluation Weights
-              </h3>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="bg-gray-50 p-4 rounded-2xl border border-gray-100">
-                   <p className="text-[10px] text-gray-400 font-bold uppercase mb-1">Functional</p>
-                   <p className="text-xl font-bold text-gray-900">40%</p>
+          {/* Left panel: Instructions + Test Results */}
+          <div className="w-1/3 min-w-[380px] bg-white overflow-y-auto border-r border-gray-100 shadow-inner flex flex-col">
+            <div className="p-8 flex-1">
+              <div className="flex items-center gap-3 mb-8 border-b border-gray-50 pb-6">
+                <div className="p-3 bg-blue-50 text-[#4a90e2] rounded-2xl">
+                  <FileCode2 className="w-6 h-6"/>
                 </div>
-                <div className="bg-gray-50 p-4 rounded-2xl border border-gray-100">
-                   <p className="text-[10px] text-gray-400 font-bold uppercase mb-1">Plagiarism</p>
-                   <p className="text-xl font-bold text-gray-900">20%</p>
+                <h2 className="text-xl font-extrabold text-gray-900 tracking-tight">Instructions</h2>
+              </div>
+
+              <div className="prose prose-slate prose-sm max-w-none text-gray-600 space-y-4 leading-relaxed">
+                <p>{selectedAssignment.description}</p>
+                <div className="bg-blue-50/50 border border-blue-100/50 p-6 rounded-2xl mt-6">
+                  <h4 className="font-bold text-[#4a90e2] mb-3 text-xs uppercase tracking-widest flex items-center gap-2">
+                     <AlertCircle size={14} /> Constraints:
+                  </h4>
+                  <ul className="text-xs space-y-2 list-disc pl-4 text-blue-800/70 italic font-medium">
+                    <li>Time complexity: O(n log n)</li>
+                    <li>Space complexity: O(n)</li>
+                    <li>In-place memory limits: 512MB</li>
+                  </ul>
                 </div>
               </div>
+
+              <div className="mt-12 pt-8 border-t border-gray-50">
+                <h3 className="font-bold text-xs mb-6 flex items-center uppercase tracking-widest text-gray-400">
+                  <Award className="w-4 h-4 mr-2"/> Evaluation Weights
+                </h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="bg-gray-50 p-4 rounded-2xl border border-gray-100">
+                     <p className="text-[10px] text-gray-400 font-bold uppercase mb-1">Functional</p>
+                     <p className="text-xl font-bold text-gray-900">40%</p>
+                  </div>
+                  <div className="bg-gray-50 p-4 rounded-2xl border border-gray-100">
+                     <p className="text-[10px] text-gray-400 font-bold uppercase mb-1">Plagiarism</p>
+                     <p className="text-xl font-bold text-gray-900">20%</p>
+                  </div>
+                </div>
+              </div>
             </div>
+
+            {/* Test Results Panel */}
+            {(testResults.length > 0 || testSummary) && (
+              <div className="border-t border-gray-200 bg-gray-50 p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="font-bold text-sm text-gray-900 flex items-center gap-2">
+                    <Play size={14} className="text-[#4a90e2]" /> Test Results
+                  </h3>
+                  {testSummary && (
+                    <div className="flex items-center gap-2 text-xs font-bold">
+                      <span className="text-green-600">{testSummary.passed} passed</span>
+                      <span className="text-gray-300">|</span>
+                      <span className="text-red-500">{testSummary.failed} failed</span>
+                    </div>
+                  )}
+                </div>
+                <div className="space-y-3 max-h-64 overflow-y-auto">
+                  {testResults.map((r, i) => (
+                    <div key={i} className={`p-4 rounded-xl border ${r.passed ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
+                      <div className="flex items-center gap-2 mb-2">
+                        {r.passed ? (
+                          <CheckCircle2 size={16} className="text-green-600" />
+                        ) : (
+                          <XCircle size={16} className="text-red-500" />
+                        )}
+                        <span className={`text-xs font-bold ${r.passed ? 'text-green-700' : 'text-red-600'}`}>
+                          Test Case #{i + 1} — {r.passed ? 'PASSED' : 'FAILED'}
+                        </span>
+                      </div>
+                      <div className="text-[11px] font-mono space-y-1">
+                        <p className="text-gray-500"><span className="font-bold text-gray-700">Input:</span> {r.input}</p>
+                        <p className="text-gray-500"><span className="font-bold text-gray-700">Expected:</span> {r.expected_output}</p>
+                        {r.actual_output !== null && (
+                          <p className={r.passed ? 'text-green-700' : 'text-red-600'}><span className="font-bold">Got:</span> {r.actual_output || '(empty)'}</p>
+                        )}
+                        {r.error && <p className="text-red-500"><span className="font-bold">Error:</span> {r.error}</p>}
+                        {r.stderr && <p className="text-orange-600"><span className="font-bold">Stderr:</span> {r.stderr}</p>}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
+          {/* Right panel: Code Editor */}
           <div className="flex-1 flex flex-col bg-[#1e1e1e]">
             <Editor
               height="100%"
               defaultLanguage="python"
               theme="vs-dark"
               value={code}
-              onChange={(val) => setCode(val || "")}
+              onChange={(val) => { if (!isReadOnly) setCode(val || ""); }}
               options={{
                 minimap: { enabled: false },
                 fontSize: 14,
@@ -219,6 +359,7 @@ export default function StudentPortal() {
                 lineNumbers: "on",
                 roundedSelection: true,
                 automaticLayout: true,
+                readOnly: isReadOnly,
               }}
             />
           </div>

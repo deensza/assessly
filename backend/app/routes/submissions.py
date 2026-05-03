@@ -1,11 +1,131 @@
 import threading
+import subprocess
+import tempfile
+import os
 from flask import Blueprint, request, jsonify, g, current_app
 from app import db
-from app.models import Submission, Assignment, Course, CourseEnrollment, UserRole, SubmissionStatus
+from app.models import Submission, Assignment, TestCase, Course, CourseEnrollment, UserRole, SubmissionStatus
 from app.services.pipeline import trigger_pipeline
 from app.utils.auth import jwt_required, role_required
 
 submissions_bp = Blueprint('submissions', __name__)
+
+
+@submissions_bp.route('/run-tests', methods=['POST'])
+@role_required('student')
+def run_tests():
+    """Run student code against visible test cases (dry run, no submission)."""
+    data = request.get_json()
+
+    if not data or 'assignment_id' not in data or 'code' not in data or 'language' not in data:
+        return jsonify({'error': 'assignment_id, code, and language are required'}), 400
+
+    assignment = Assignment.query.get_or_404(data['assignment_id'])
+
+    # Get only visible test cases
+    test_cases = TestCase.query.filter_by(
+        assignment_id=assignment.id,
+        is_hidden=False
+    ).all()
+
+    if not test_cases:
+        return jsonify({
+            'message': 'No visible test cases available',
+            'results': [],
+            'summary': {'total': 0, 'passed': 0, 'failed': 0}
+        }), 200
+
+    results = []
+    language = data['language']
+    code = data['code']
+
+    for tc in test_cases:
+        try:
+            # Write code to a temp file
+            if language == 'python':
+                suffix = '.py'
+                cmd_prefix = ['python3']
+            elif language == 'java':
+                suffix = '.java'
+                cmd_prefix = ['java']
+            elif language in ('c', 'cpp'):
+                suffix = '.c'
+                cmd_prefix = ['gcc', '-o']
+            else:
+                suffix = '.py'
+                cmd_prefix = ['python3']
+
+            with tempfile.NamedTemporaryFile(mode='w', suffix=suffix, delete=False, dir='/tmp') as f:
+                f.write(code)
+                f.flush()
+                code_path = f.name
+
+            try:
+                if language == 'python':
+                    proc = subprocess.run(
+                        ['python3', code_path],
+                        input=tc.input,
+                        capture_output=True,
+                        text=True,
+                        timeout=assignment.time_limit_seconds
+                    )
+                else:
+                    # For non-python, just run python for now (sandbox limitation)
+                    proc = subprocess.run(
+                        ['python3', code_path],
+                        input=tc.input,
+                        capture_output=True,
+                        text=True,
+                        timeout=assignment.time_limit_seconds
+                    )
+
+                actual_output = proc.stdout.strip()
+                expected_output = tc.expected_output.strip()
+                passed = actual_output == expected_output
+
+                results.append({
+                    'test_case_id': tc.id,
+                    'input': tc.input,
+                    'expected_output': expected_output,
+                    'actual_output': actual_output,
+                    'stderr': proc.stderr[:500] if proc.stderr else None,
+                    'passed': passed,
+                    'error': None
+                })
+            except subprocess.TimeoutExpired:
+                results.append({
+                    'test_case_id': tc.id,
+                    'input': tc.input,
+                    'expected_output': tc.expected_output.strip(),
+                    'actual_output': None,
+                    'stderr': None,
+                    'passed': False,
+                    'error': f'Time limit exceeded ({assignment.time_limit_seconds}s)'
+                })
+            finally:
+                os.unlink(code_path)
+
+        except Exception as e:
+            results.append({
+                'test_case_id': tc.id,
+                'input': tc.input,
+                'expected_output': tc.expected_output.strip(),
+                'actual_output': None,
+                'stderr': None,
+                'passed': False,
+                'error': str(e)
+            })
+
+    passed_count = sum(1 for r in results if r['passed'])
+
+    return jsonify({
+        'results': results,
+        'summary': {
+            'total': len(results),
+            'passed': passed_count,
+            'failed': len(results) - passed_count
+        }
+    }), 200
 
 
 @submissions_bp.route('', methods=['POST'])

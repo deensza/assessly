@@ -188,6 +188,14 @@ export const submissionsApi = {
     });
     return res.data;
   },
+  async runTests(assignmentId: number, code: string, language: string) {
+    const res = await api.post('/submissions/run-tests', {
+      assignment_id: assignmentId,
+      code,
+      language,
+    });
+    return res.data;
+  },
   async get(id: number) {
     const res = await api.get(`/submissions/${id}`);
     return res.data;
