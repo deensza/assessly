@@ -1,13 +1,21 @@
 "use client";
+import { useState } from "react";
 import { FileCode2, Search, Filter, MoreVertical, CheckCircle2, Clock } from "lucide-react";
 
 export default function InstructorAssignments() {
+  const [searchQuery, setSearchQuery] = useState("");
+  
   const assignments = [
     { id: 1, title: "Merge Sort Optimization", course: "COMP 3304", submissions: 120, avgScore: "84.5%", status: "Completed" },
     { id: 2, title: "Dynamic Programming", course: "COMP 3304", submissions: 45, avgScore: "-", status: "Active" },
     { id: 3, title: "Linked List Deletion", course: "COMP 3328", submissions: 89, avgScore: "76.2%", status: "Completed" },
     { id: 4, title: "Binary Search Trees", course: "COMP 3304", submissions: 118, avgScore: "91.2%", status: "Completed" },
   ];
+
+  const filteredAssignments = assignments.filter(a => 
+    a.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
+    a.course.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   return (
     <div className="space-y-8 animate-fade-in-up">
@@ -19,7 +27,13 @@ export default function InstructorAssignments() {
         <div className="flex items-center gap-3">
           <div className="relative">
             <Search className="absolute left-3.5 top-2.5 text-gray-400" size={16} />
-            <input type="text" placeholder="Search assignments..." className="pl-10 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#4a90e2]/30 focus:border-[#4a90e2] bg-white shadow-sm transition-all" />
+            <input 
+              type="text" 
+              placeholder="Search assignments..." 
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#4a90e2]/30 focus:border-[#4a90e2] bg-white shadow-sm transition-all" 
+            />
           </div>
           <button className="p-2.5 border border-gray-200 rounded-xl hover:bg-white transition-all shadow-sm hover:shadow-md"><Filter size={18} className="text-gray-600" /></button>
         </div>
@@ -38,7 +52,7 @@ export default function InstructorAssignments() {
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-50 text-sm">
-            {assignments.map(item => (
+            {filteredAssignments.map(item => (
               <tr key={item.id} className="hover:bg-blue-50/30 transition-colors">
                 <td className="px-6 py-5 font-bold text-gray-800">{item.title}</td>
                 <td className="px-6 py-5 text-gray-500">{item.course}</td>
@@ -57,6 +71,14 @@ export default function InstructorAssignments() {
                 </td>
               </tr>
             ))}
+            ))}
+            {filteredAssignments.length === 0 && (
+              <tr>
+                <td colSpan={6} className="px-6 py-12 text-center text-gray-400 font-medium">
+                  No assignments match your search query.
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>

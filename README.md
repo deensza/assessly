@@ -2,11 +2,20 @@
 
 ## Project Overview
 
-Build a full-stack web application called "Assessly" — an automated programming assignment evaluation platform for universities. The system allows instructors to create programming assignments with test cases, students to submit code solutions, and the platform to automatically evaluate submissions inside secure Docker sandboxes, detect plagiarism, estimate AI-generated code probability, and provide detailed feedback with transparent grading.
+Assessly is an automated programming assignment evaluation platform designed to assist instructors in grading programming assignments efficiently and fairly. The system evaluates student submissions automatically by executing code in a secure environment, running predefined test cases, and generating transparent grading reports. Assessly also integrates advanced analysis features such as plagiarism detection and AI-generated code probability estimation. By combining automated evaluation with intelligent analysis, the system helps maintain academic integrity while significantly reducing the manual grading workload for instructors. The platform integrates with Moodle and executes student submissions securely using Docker-based sandbox environments.
+
+## Team Members
+- Özgür Can Güngör
+- İrem Şura Erkan
+- Bermal Deniz Akkaya
+- Berkan Mursal
+
+## Problem Statement
+In large programming courses, instructors must manually evaluate hundreds of submissions. This process is time-consuming and often lacks transparency for students. Students usually receive only a numeric score without understanding which test cases failed or where their mistakes occurred. Additionally, with the increasing use of AI tools, detecting AI-generated solutions and plagiarism has become a major challenge in programming education. Assessly addresses these issues by automating evaluation, improving feedback transparency, and supporting academic integrity.
 
 ## Tech Stack
 
-- **Frontend:** React (Vite) + Tailwind CSS
+- **Frontend:** Next.js (React) + Tailwind CSS
 - **Backend:** Flask (Python) REST API
 - **Database:** PostgreSQL
 - **Code Execution:** Docker containers (sandbox)
@@ -42,7 +51,7 @@ Build a full-stack web application called "Assessly" — an automated programmin
 ## Architecture & Design Pattern
 
 Use **Layered Architecture** with clear separation:
-1. **Presentation Layer** — React frontend with role-based dashboards
+1. **Presentation Layer** — Next.js frontend with role-based dashboards
 2. **Business Logic Layer** — Flask API with service classes
 3. **Data & Infrastructure Layer** — PostgreSQL, Docker sandbox
 
@@ -265,21 +274,19 @@ assessly/
 │   └── config.py
 ├── frontend/
 │   ├── src/
-│   │   ├── pages/
-│   │   │   ├── StudentDashboard.jsx
-│   │   │   ├── InstructorDashboard.jsx
-│   │   │   ├── AdminPanel.jsx
-│   │   │   ├── AssignmentView.jsx
-│   │   │   ├── SubmissionResults.jsx
-│   │   │   └── Login.jsx
+│   │   ├── app/
+│   │   │   ├── admin/
+│   │   │   ├── instructor/
+│   │   │   ├── student/
+│   │   │   ├── submissions/
+│   │   │   └── layout.tsx
 │   │   ├── components/
-│   │   │   ├── CodeEditor.jsx
-│   │   │   ├── TestCaseForm.jsx
-│   │   │   ├── ResultsTable.jsx
-│   │   │   └── ScoreBreakdown.jsx
-│   │   ├── services/
-│   │   │   └── api.js
-│   │   └── App.jsx
+│   │   │   ├── TestCasesTable.tsx
+│   │   │   ├── ui/
+│   │   │   └── AuthProvider.tsx
+│   │   ├── lib/
+│   │   │   └── api.ts
+│   │   └── styles/
 │   └── package.json
 ├── docker/
 │   ├── sandbox-python/Dockerfile
@@ -297,3 +304,54 @@ assessly/
 - Frontend should poll submission status or use WebSocket for real-time updates
 - All API endpoints (except auth) require JWT authentication
 - Role-based access control: students can only see their own submissions, instructors see all for their courses
+
+## Repository Purpose
+This repository demonstrates collaborative Git and GitHub workflows including:
+- Branch creation
+- Commit and push operations
+- Pull Requests
+- Peer code review
+- Merge conflict resolution
+
+Each team member contributes to this shared README file through their own branch, simulating a real-world collaborative software development workflow.
+
+### Collaboration Update
+This section was updated after merging the first pull request to simulate a merge conflict scenario
+
+### Commit History
+```
+* 298892c Merge branch 'main' into berkan-branch
+|\
+* | e42b04f Add contribution section for Berkan
+17ae9e6 Merge branch 'main' into IremXErkan-patch-1
+| | *
+| | |\
+| | |/
+| |/|
+| | * f3988af Add project architecture section to README
+| |/
+|/|
+| | * 8a1cbb7 Merge branch 'main' into ozgur
+| | |\
+| | |/
+| |/|
+| * | 68c3f29 Update README to trigger merge conflict
+| * | 89e3f20 Merge pull request #1 from deensza/deniz-branch
+|/| |
+| * | 8ff6fa6 Add project summary to README
+|/ /
+| * f69e973 ozgur: README katkısı eklendi
+|/
+* 9436690 Initial commit
+```
+
+## Jira Project Management
+The Jira project for Assessly was created using a Scrum-based approach to effectively manage the product backlog and sprint planning process. The product backlog was derived from the defined user stories based on the system’s main actors: students, instructors, and administrators.
+
+The backlog was prioritised according to the system’s core functionalities. High-priority items include assignment management, secure code execution, and automated test case evaluation. These features are essential for building the minimum viable product (MVP) of the system.
+
+Sprint 1, titled "Core Evaluation Workflow", was created to implement the fundamental workflow of the platform. The selected user stories for this sprint include assignment creation, submission upload, secure code execution, test case definition, automated evaluation, and displaying results to the user.
+
+Due to the use of a team-managed Jira project, labels were used instead of Epics to logically group related user stories. Labels such as "assignment-management", "secure-execution", "automated-evaluation", and "feedback" were assigned to represent different functional modules of the system.
+
+This sprint establishes the core structure of Assessly and ensures that the system can operate end-to-end before introducing advanced features such as plagiarism detection, AI-based analysis, and Moodle integration in future iterations.

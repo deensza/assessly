@@ -21,11 +21,24 @@ def create_assignment():
     if g.current_user.role == UserRole.instructor and course.instructor_id != g.current_user.id:
         return jsonify({'error': 'You do not own this course'}), 403
 
+    from datetime import datetime
+    
+    due_date_str = data.get('due_date')
+    due_date_obj = None
+    if due_date_str:
+        # Handle ISO format ending with Z
+        if due_date_str.endswith('Z'):
+            due_date_str = due_date_str[:-1]
+        try:
+            due_date_obj = datetime.fromisoformat(due_date_str)
+        except ValueError:
+            pass
+
     assignment = Assignment(
         course_id=data['course_id'],
         title=data['title'],
         description=data.get('description', ''),
-        due_date=data.get('due_date'),
+        due_date=due_date_obj,
         supported_languages=data.get('supported_languages', ['python', 'java', 'c']),
         time_limit_seconds=data.get('time_limit_seconds', 10),
         memory_limit_mb=data.get('memory_limit_mb', 256)
