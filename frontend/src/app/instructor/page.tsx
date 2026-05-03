@@ -73,7 +73,7 @@ export default function InstructorDashboard() {
   if (loading) {
     return (
       <div className="flex-1 flex items-center justify-center p-12">
-        <div className="animate-pulse flex flex-col items-center">
+        <div className="flex flex-col items-center">
           <div className="w-12 h-12 border-4 border-[#4a90e2] border-t-transparent rounded-full animate-spin"></div>
           <p className="mt-4 text-gray-500 font-medium">Loading dashboard...</p>
         </div>
@@ -82,24 +82,24 @@ export default function InstructorDashboard() {
   }
 
   if (error) {
-    return <div className="p-8 text-red-500">{error}</div>;
+    return <div className="p-8 text-red-500 font-medium">{error}</div>;
   }
 
   return (
-    <div className="space-y-8 max-w-6xl pb-12">
+    <div className="space-y-8 max-w-6xl pb-12 animate-fade-in-up">
       {/* Header */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-end bg-white p-8 rounded-2xl border border-gray-200 shadow-sm gap-4">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-end bg-white p-8 rounded-2xl border border-gray-100 shadow-sm gap-4">
         <div>
           <h1 className="text-3xl font-extrabold tracking-tight text-gray-900">Overview</h1>
-          <p className="text-gray-500 mt-1 font-medium italic">Welcome back, Dr. Suphi Ucar.</p>
+          <p className="text-gray-500 mt-1 font-medium">Welcome back, Dr. Suphi Ucar.</p>
         </div>
         <div className="flex gap-3">
-          <button className="flex items-center gap-2 bg-gray-50 hover:bg-gray-100 text-gray-700 px-5 py-2.5 rounded-xl font-bold transition-all border border-gray-100">
-             <Sliders size={18} /> Global Settings
+          <button className="flex items-center gap-2 bg-gray-50 hover:bg-gray-100 text-gray-700 px-5 py-2.5 rounded-xl font-semibold transition-all border border-gray-100 text-sm">
+             <Sliders size={16} /> Global Settings
           </button>
           <Link 
             href="/instructor/create" 
-            className="flex items-center gap-2 bg-[#4a90e2] hover:bg-[#357abd] text-white px-5 py-2.5 rounded-xl font-bold transition-all shadow-lg shadow-blue-500/20"
+            className="flex items-center gap-2 bg-gradient-to-r from-[#4a90e2] to-[#357abd] hover:from-[#357abd] hover:to-[#2c68a0] text-white px-5 py-2.5 rounded-xl font-semibold transition-all shadow-lg shadow-blue-500/15 text-sm"
           >
             + New Assignment
           </Link>
@@ -109,56 +109,62 @@ export default function InstructorDashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 space-y-8">
           {/* Stats Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-            <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 border-l-8 border-l-[#4a90e2] hover:shadow-md transition-shadow">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 stagger-children">
+            <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-all duration-300 animate-fade-in-up group">
               <div className="flex items-center justify-between text-gray-400 mb-4">
                 <h3 className="font-bold text-[10px] uppercase tracking-widest">Active Assignments</h3>
-                <Activity className="w-5 h-5 text-[#4a90e2]" />
+                <div className="w-10 h-10 bg-[#e8f1fb] rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <Activity className="w-5 h-5 text-[#4a90e2]" />
+                </div>
               </div>
-              <span className="text-3xl font-bold text-gray-900">{stats.totalAssignments}</span>
+              <span className="text-3xl font-extrabold text-gray-900">{stats.totalAssignments}</span>
+              <div className="mt-2 h-1 w-12 bg-[#4a90e2] rounded-full"></div>
             </div>
 
-            <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 border-l-8 border-l-emerald-500 hover:shadow-md transition-shadow">
+            <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-all duration-300 animate-fade-in-up group">
               <div className="flex items-center justify-between text-gray-400 mb-4">
                 <h3 className="font-bold text-[10px] uppercase tracking-widest">Total Submissions</h3>
-                <CheckCircle2 className="w-5 h-5 text-emerald-500" />
+                <div className="w-10 h-10 bg-green-50 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <CheckCircle2 className="w-5 h-5 text-green-500" />
+                </div>
               </div>
-              <span className="text-3xl font-bold text-gray-900">{stats.totalSubmissions}</span>
+              <span className="text-3xl font-extrabold text-gray-900">{stats.totalSubmissions}</span>
+              <div className="mt-2 h-1 w-12 bg-green-500 rounded-full"></div>
             </div>
           </div>
 
           {/* Recent Activity Table */}
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-            <div className="p-8 border-b border-gray-50 bg-gray-50/30 flex items-center justify-between">
-              <h2 className="text-xl font-bold text-gray-900">Recent Assignments</h2>
+            <div className="p-6 border-b border-gray-50 bg-gray-50/50 flex items-center justify-between">
+              <h2 className="text-lg font-bold text-gray-900">Recent Assignments</h2>
               <button className="text-xs font-bold text-[#4a90e2] hover:underline">View All</button>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="border-b border-gray-50 text-[10px] text-gray-400 uppercase font-bold tracking-widest">
-                    <th className="px-8 py-4">Assignment</th>
-                    <th className="px-8 py-4">Avg Score</th>
-                    <th className="px-8 py-4">Status</th>
+                    <th className="px-6 py-4">Assignment</th>
+                    <th className="px-6 py-4">Avg Score</th>
+                    <th className="px-6 py-4">Status</th>
                   </tr>
                 </thead>
                 <tbody className="text-sm divide-y divide-gray-50">
                   {recentAssignments.map((a) => (
-                    <tr key={a.id} className="hover:bg-gray-50/50 transition-colors">
-                      <td className="px-8 py-5">
+                    <tr key={a.id} className="hover:bg-blue-50/30 transition-colors">
+                      <td className="px-6 py-5">
                          <div className="font-bold text-gray-800">{a.title}</div>
-                         <div className="text-[10px] text-gray-400">{a.courseTitle} • {a.submissionsCount} Submissions</div>
+                         <div className="text-[10px] text-gray-400 mt-0.5">{a.courseTitle} • {a.submissionsCount} Submissions</div>
                       </td>
-                      <td className="px-8 py-5 font-bold text-emerald-600">{a.avgScore.toFixed(1)}%</td>
-                      <td className="px-8 py-5">
-                        <Link href={`/instructor/submissions?assignment_id=${a.id}`} className="bg-blue-50 text-[#4a90e2] px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-tight hover:bg-blue-100">
+                      <td className="px-6 py-5 font-bold text-green-600">{a.avgScore.toFixed(1)}%</td>
+                      <td className="px-6 py-5">
+                        <Link href={`/instructor/submissions?assignment_id=${a.id}`} className="bg-[#e8f1fb] text-[#4a90e2] px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-tight hover:bg-[#d0e3f7] transition-colors">
                           View
                         </Link>
                       </td>
                     </tr>
                   ))}
                   {recentAssignments.length === 0 && (
-                    <tr><td colSpan={3} className="px-8 py-5 text-center text-gray-400">No assignments found</td></tr>
+                    <tr><td colSpan={3} className="px-6 py-8 text-center text-gray-400">No assignments found</td></tr>
                   )}
                 </tbody>
               </table>
@@ -166,36 +172,36 @@ export default function InstructorDashboard() {
           </div>
         </div>
 
-        {/* Grading Strategy Policy (Premium Feature) */}
+        {/* Grading Strategy Policy */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden h-fit sticky top-24">
-           <div className="p-8 border-b border-gray-50 bg-gray-50/50 flex items-center justify-between">
+           <div className="p-6 border-b border-gray-50 bg-gray-50/50 flex items-center justify-between">
               <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
-                 <Target size={20} className="text-[#4a90e2]" /> 
+                 <Target size={18} className="text-[#4a90e2]" /> 
                  Assessly Policy
               </h2>
-              <button className="p-2 hover:bg-white rounded-lg text-[#4a90e2] transition-colors" title="Save Policy">
-                 <Save size={20} />
+              <button className="p-2 hover:bg-gray-100 rounded-xl text-[#4a90e2] transition-colors" title="Save Policy">
+                 <Save size={18} />
               </button>
            </div>
-           <div className="p-8 space-y-8">
+           <div className="p-6 space-y-6">
               <p className="text-xs text-gray-500 font-medium leading-relaxed">
                  Configure default evaluation weights for all course assignments. Changes apply to new submissions.
               </p>
 
-              <div className="space-y-6">
+              <div className="space-y-5">
                  {/* Correctness */}
                  <div className="space-y-2">
                     <div className="flex justify-between items-center">
                        <label className="text-xs font-bold text-gray-700 uppercase flex items-center gap-2">
-                          <CheckCircle2 size={14} className="text-emerald-500" /> Correctness
+                          <CheckCircle2 size={14} className="text-green-500" /> Correctness
                        </label>
-                       <span className="text-sm font-bold text-gray-900">{weights.correctness}%</span>
+                       <span className="text-sm font-extrabold text-gray-900 bg-gray-50 px-2.5 py-0.5 rounded-lg">{weights.correctness}%</span>
                     </div>
                     <input 
                       type="range" min="0" max="100" step="5"
                       value={weights.correctness}
                       onChange={(e) => setWeights({...weights, correctness: parseInt(e.target.value)})}
-                      className="w-full h-1.5 bg-gray-100 rounded-lg appearance-none cursor-pointer accent-[#4a90e2]"
+                      className="w-full h-1.5 bg-gray-100 rounded-lg appearance-none cursor-pointer accent-green-500"
                     />
                  </div>
 
@@ -203,15 +209,15 @@ export default function InstructorDashboard() {
                  <div className="space-y-2">
                     <div className="flex justify-between items-center">
                        <label className="text-xs font-bold text-gray-700 uppercase flex items-center gap-2">
-                          <ShieldAlert size={14} className="text-rose-500" /> Plagiarism
+                          <ShieldAlert size={14} className="text-red-500" /> Plagiarism
                        </label>
-                       <span className="text-sm font-bold text-gray-900">{weights.plagiarism}%</span>
+                       <span className="text-sm font-extrabold text-gray-900 bg-gray-50 px-2.5 py-0.5 rounded-lg">{weights.plagiarism}%</span>
                     </div>
                     <input 
                       type="range" min="0" max="100" step="5"
                       value={weights.plagiarism}
                       onChange={(e) => setWeights({...weights, plagiarism: parseInt(e.target.value)})}
-                      className="w-full h-1.5 bg-gray-100 rounded-lg appearance-none cursor-pointer accent-rose-500"
+                      className="w-full h-1.5 bg-gray-100 rounded-lg appearance-none cursor-pointer accent-red-500"
                     />
                  </div>
 
@@ -219,25 +225,25 @@ export default function InstructorDashboard() {
                  <div className="space-y-2">
                     <div className="flex justify-between items-center">
                        <label className="text-xs font-bold text-gray-700 uppercase flex items-center gap-2">
-                          <Code2 size={14} className="text-amber-500" /> Structural (AST)
+                          <Code2 size={14} className="text-[#ff9800]" /> Structural (AST)
                        </label>
-                       <span className="text-sm font-bold text-gray-900">{weights.structural}%</span>
+                       <span className="text-sm font-extrabold text-gray-900 bg-gray-50 px-2.5 py-0.5 rounded-lg">{weights.structural}%</span>
                     </div>
                     <input 
                       type="range" min="0" max="100" step="5"
                       value={weights.structural}
                       onChange={(e) => setWeights({...weights, structural: parseInt(e.target.value)})}
-                      className="w-full h-1.5 bg-gray-100 rounded-lg appearance-none cursor-pointer accent-amber-500"
+                      className="w-full h-1.5 bg-gray-100 rounded-lg appearance-none cursor-pointer accent-[#ff9800]"
                     />
                  </div>
 
-                 {/* AI Prob */}
+                 {/* AI Detection */}
                  <div className="space-y-2">
                     <div className="flex justify-between items-center">
                        <label className="text-xs font-bold text-gray-700 uppercase flex items-center gap-2">
                           <Cpu size={14} className="text-purple-500" /> AI Detection
                        </label>
-                       <span className="text-sm font-bold text-gray-900">{weights.ai}%</span>
+                       <span className="text-sm font-extrabold text-gray-900 bg-gray-50 px-2.5 py-0.5 rounded-lg">{weights.ai}%</span>
                     </div>
                     <input 
                       type="range" min="0" max="100" step="5"
@@ -248,8 +254,12 @@ export default function InstructorDashboard() {
                  </div>
               </div>
 
-              <div className="pt-4 p-4 bg-blue-50/50 rounded-xl border border-blue-100 text-[10px] text-blue-700 leading-relaxed italic">
-                 Total Weight: {weights.correctness + weights.plagiarism + weights.structural + weights.ai}% (Targets 100%)
+              <div className={`p-4 rounded-xl border text-xs font-medium ${
+                (weights.correctness + weights.plagiarism + weights.structural + weights.ai) === 100 
+                  ? 'bg-green-50 border-green-100 text-green-700' 
+                  : 'bg-[#ff9800]/5 border-[#ff9800]/20 text-[#ff9800]'
+              }`}>
+                 Total Weight: {weights.correctness + weights.plagiarism + weights.structural + weights.ai}% {(weights.correctness + weights.plagiarism + weights.structural + weights.ai) === 100 ? '✓' : '(Target: 100%)'}
               </div>
            </div>
         </div>

@@ -72,8 +72,8 @@ function InstructorSubmissionsContent() {
 
   const scoreColor = (score: number | null) => {
     if (score === null) return "text-gray-400";
-    if (score >= 80) return "text-emerald-600";
-    if (score >= 50) return "text-amber-600";
+    if (score >= 80) return "text-green-600";
+    if (score >= 50) return "text-[#ff9800]";
     return "text-red-600";
   };
 
@@ -86,14 +86,14 @@ function InstructorSubmissionsContent() {
   }
 
   return (
-    <div className="space-y-6 max-w-6xl">
+    <div className="space-y-6 max-w-6xl animate-fade-in-up">
       {/* Header */}
       <div className="flex items-center gap-4">
         <button
           onClick={() => router.back()}
-          className="p-2 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors shadow-sm"
+          className="p-2.5 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-all shadow-sm hover:shadow-md"
         >
-          <ArrowLeft size={20} className="text-gray-600" />
+          <ArrowLeft size={18} className="text-gray-600" />
         </button>
         <div className="flex-1">
           <h1 className="text-2xl font-extrabold text-gray-900 tracking-tight">
@@ -107,8 +107,8 @@ function InstructorSubmissionsContent() {
           onClick={() => setShowFlaggedOnly(!showFlaggedOnly)}
           className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold transition-all border ${
             showFlaggedOnly
-              ? "bg-red-50 border-red-200 text-red-600"
-              : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50"
+              ? "bg-red-50 border-red-200 text-red-600 shadow-sm"
+              : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50 shadow-sm"
           }`}
         >
           <Filter size={16} />
@@ -117,16 +117,17 @@ function InstructorSubmissionsContent() {
       </div>
 
       {error && (
-        <div className="bg-red-50 text-red-600 px-4 py-3 rounded-xl border border-red-100 font-medium text-sm">
+        <div className="bg-red-50 text-red-600 px-4 py-3 rounded-xl border border-red-100 font-medium text-sm flex items-center gap-2">
+          <div className="w-2 h-2 bg-red-500 rounded-full"></div>
           {error}
         </div>
       )}
 
       {/* Table */}
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-50 bg-gray-50/30 flex items-center gap-2">
-          <Users size={18} className="text-[#4a90e2]" />
-          <h2 className="font-bold text-gray-800">All Student Submissions</h2>
+        <div className="px-6 py-4 border-b border-gray-50 bg-gray-50/50 flex items-center gap-2">
+          <Users size={16} className="text-[#4a90e2]" />
+          <h2 className="font-bold text-gray-800 text-sm">All Student Submissions</h2>
         </div>
 
         <div className="overflow-x-auto">
@@ -149,25 +150,25 @@ function InstructorSubmissionsContent() {
               {submissions.map((s) => (
                 <tr
                   key={s.id}
-                  className={`hover:bg-gray-50/50 transition-colors ${
+                  className={`hover:bg-blue-50/30 transition-colors ${
                     s.flagged ? "bg-red-50/20" : ""
                   }`}
                 >
                   <td className="px-6 py-4 font-mono text-gray-500 text-xs">#{s.id}</td>
                   <td className="px-6 py-4 font-bold text-gray-800">Student #{s.student_id}</td>
                   <td className="px-6 py-4">
-                    <span className="bg-gray-100 text-gray-600 px-2 py-0.5 rounded text-xs font-bold uppercase">
+                    <span className="bg-gray-100 text-gray-600 px-2.5 py-0.5 rounded-lg text-xs font-bold uppercase border border-gray-200">
                       {s.language}
                     </span>
                   </td>
                   <td className="px-6 py-4">
                     <span
-                      className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-tight ${
+                      className={`px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-tight border ${
                         s.status === "completed"
-                          ? "bg-emerald-50 text-emerald-600"
+                          ? "bg-green-50 text-green-600 border-green-100"
                           : s.status === "error"
-                          ? "bg-red-50 text-red-600"
-                          : "bg-blue-50 text-[#4a90e2]"
+                          ? "bg-red-50 text-red-600 border-red-100"
+                          : "bg-[#e8f1fb] text-[#4a90e2] border-[#4a90e2]/10"
                       }`}
                     >
                       {s.status}
@@ -208,7 +209,7 @@ function InstructorSubmissionsContent() {
                         <AlertTriangle size={14} className="text-red-500" />
                       )}
                       {(s.plagiarism_score || 0) >= 0.8 && (
-                        <ShieldAlert size={14} className="text-rose-500" />
+                        <ShieldAlert size={14} className="text-red-500" />
                       )}
                       {(s.ai_probability || 0) >= 0.7 && (
                         <BrainCircuit size={14} className="text-purple-500" />
@@ -222,7 +223,7 @@ function InstructorSubmissionsContent() {
                   <td className="px-6 py-4">
                     <button
                       onClick={() => router.push(`/submissions/${s.id}`)}
-                      className="p-2 text-[#4a90e2] hover:bg-blue-50 rounded-lg transition-colors"
+                      className="p-2 text-[#4a90e2] hover:bg-[#e8f1fb] rounded-xl transition-colors"
                       title="View details"
                     >
                       <Eye size={16} />
@@ -232,7 +233,7 @@ function InstructorSubmissionsContent() {
               ))}
               {submissions.length === 0 && (
                 <tr>
-                  <td colSpan={10} className="px-6 py-12 text-center text-gray-400">
+                  <td colSpan={10} className="px-6 py-12 text-center text-gray-400 font-medium">
                     {showFlaggedOnly
                       ? "No flagged submissions found."
                       : "No submissions yet for this assignment."}
