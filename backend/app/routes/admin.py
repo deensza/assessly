@@ -87,12 +87,18 @@ def update_moodle_config():
 @admin_bp.route('/moodle/test', methods=['POST'])
 @role_required('admin')
 def test_moodle_connection():
-    """Test Moodle API connection."""
-    if not _moodle_config['api_url'] or not _moodle_config['token']:
-        return jsonify({'error': 'Moodle not configured. Set API URL and token first.'}), 400
+    """Test Moodle API connection. Accepts optional api_url and token in body."""
+    data = request.get_json() or {}
+
+    # Use request body values if provided, otherwise fall back to saved config
+    test_url = data.get('api_url') or _moodle_config['api_url']
+    test_token = data.get('token') or _moodle_config['token']
+
+    if not test_url or not test_token:
+        return jsonify({'status': 'error', 'message': 'Moodle API URL and token are required.'}), 400
 
     try:
-        svc = create_moodle_service(_moodle_config['api_url'], _moodle_config['token'])
+        svc = create_moodle_service(test_url, test_token)
         result = svc.test_connection()
         return jsonify(result), 200
     except ValueError as e:
