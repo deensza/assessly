@@ -107,3 +107,27 @@ with app.app_context():
         print("  - Admin:      admin@yasar.edu.tr / password123")
     else:
         print("Database already contains data.")
+
+    # Always ensure enrollment and admin exist (repair if missing)
+    student = User.query.filter_by(email='deniz@stu.yasar.edu.tr').first()
+    course = Course.query.first()
+    if student and course:
+        existing_enrollment = CourseEnrollment.query.filter_by(
+            course_id=course.id, student_id=student.id
+        ).first()
+        if not existing_enrollment:
+            db.session.add(CourseEnrollment(course_id=course.id, student_id=student.id))
+            db.session.commit()
+            print("  [REPAIR] Student enrollment created.")
+
+    if not User.query.filter_by(email='admin@yasar.edu.tr').first():
+        admin = User(
+            name='Ali Sezgin',
+            email='admin@yasar.edu.tr',
+            password_hash=hash_password('password123'),
+            role=UserRole.admin
+        )
+        db.session.add(admin)
+        db.session.commit()
+        print("  [REPAIR] Admin user created.")
+
