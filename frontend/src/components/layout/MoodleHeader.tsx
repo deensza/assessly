@@ -1,182 +1,256 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
-import { User, Bell, MessageSquare, ChevronDown, Monitor, Database, ShieldCheck } from "lucide-react";
-
-type Persona = {
-  name: string;
-  role: 'student' | 'instructor' | 'admin';
-  initials: string;
-};
-
-const personas: Persona[] = [
-  { name: "Deniz Akkaya", role: "student", initials: "DA" },
-  { name: "Dr. Suphi Ucar", role: "instructor", initials: "SU" },
-  { name: "Ali Sezgin", role: "admin", initials: "AS" }
-];
+import { useAuth } from "@/context/AuthContext";
+import { Bell, MessageSquare, ChevronDown, LogOut, X, Clock, CheckCircle2, Info } from "lucide-react";
 
 export default function MoodleHeader() {
-  const [activePersona, setActivePersona] = useState<Persona>(personas[0]);
+  const { user, logout, isAuthenticated } = useAuth();
   const [showDropdown, setShowDropdown] = useState(false);
-  const [isLoaded, setIsLoaded] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [showMessages, setShowMessages] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
+  
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const notifRef = useRef<HTMLDivElement>(null);
+  const msgRef = useRef<HTMLDivElement>(null);
 
-  // Initial load from localStorage
+  // Click-outside handler to close popups
   useEffect(() => {
-    const saved = localStorage.getItem('activePersona');
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        const match = personas.find(p => p.name === parsed.name);
-        if (match) setActivePersona(match);
-      } catch (e) {
-        console.error("Error loading persona", e);
+    function handleClickOutside(e: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setShowDropdown(false);
+      }
+      if (notifRef.current && !notifRef.current.contains(e.target as Node)) {
+        setShowNotifications(false);
+      }
+      if (msgRef.current && !msgRef.current.contains(e.target as Node)) {
+        setShowMessages(false);
       }
     }
-    setIsLoaded(true);
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Sync with localStorage
-  useEffect(() => {
-    if (!isLoaded) return;
-    
-    localStorage.setItem('activePersona', JSON.stringify(activePersona));
-    window.dispatchEvent(new Event('personaChanged'));
-    
-    // Automatic redirection logic when switching roles
-    if (pathname.includes('/student') || pathname.includes('/instructor') || pathname.includes('/admin')) {
-        if (activePersona.role === 'admin' && !pathname.startsWith('/admin')) {
-            router.push('/admin');
-        } else if (activePersona.role === 'instructor' && !pathname.startsWith('/instructor')) {
-            router.push('/instructor');
-        } else if (activePersona.role === 'student' && !pathname.startsWith('/student')) {
-            router.push('/student');
-        }
-    }
-  }, [activePersona, pathname, router, isLoaded]);
+  const handleLogout = () => {
+    logout();
+    router.push("/login");
+  };
+
+  const getInitials = (name: string) => {
+    return name
+      .split(" ")
+      .map((n) => n[0])
+      .join("")
+      .toUpperCase()
+      .slice(0, 2);
+  };
+
+  // Check if a path is active
+  const isActive = (path: string) => pathname === path;
+
+  const linkClass = (path: string) =>
+    `px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
+      isActive(path)
+        ? "bg-white/20 text-white border border-white/30"
+        : "text-blue-100 hover:text-white hover:bg-white/10"
+    }`;
 
   const renderNavLinks = () => {
-    const commonPrefix = (
-      <>
-        <Link href="/" className="hover:text-blue-100 transition-colors">Home</Link>
-      </>
-    );
+    if (!user) {
+      return (
+        <Link href="/login" className={linkClass("/login")}>
+          Assessly
+        </Link>
+      );
+    }
 
-    if (activePersona.role === 'admin') {
+    if (user.role === "admin") {
       return (
         <>
-          {commonPrefix}
-          <div className="text-blue-200 cursor-default px-2">Database</div>
-          <Link 
-            href="/admin" 
-            className="bg-white/10 px-3 py-1 rounded-md font-bold border border-white/20 hover:bg-white/20 transition-all"
-          >
-            Assessly
+          <Link href="/admin" className={linkClass("/admin")}>
+            Dashboard
           </Link>
-          <div className="text-blue-200 cursor-default px-2">Archive System</div>
-          <div className="text-blue-200 cursor-default px-2">Maintenance</div>
+          <Link href="/admin/sandbox" className={linkClass("/admin/sandbox")}>
+            Sandbox
+          </Link>
+          <Link href="/admin/moodle" className={linkClass("/admin/moodle")}>
+            Moodle
+          </Link>
         </>
       );
     }
 
+    if (user.role === "instructor") {
+      return (
+        <>
+          <Link href="/instructor" className={linkClass("/instructor")}>
+            Dashboard
+          </Link>
+          <Link href="/instructor/create" className={linkClass("/instructor/create")}>
+            Create Assignment
+          </Link>
+          <Link href="/instructor/submissions" className={linkClass("/instructor/submissions")}>
+            Submissions
+          </Link>
+        </>
+      );
+    }
+
+    // Student
     return (
       <>
-        {commonPrefix}
-        <div className="text-blue-200 cursor-default px-2">Dashboard</div>
-        <Link 
-          href={activePersona.role === 'instructor' ? '/instructor' : '/student'} 
-          className="bg-white/10 px-3 py-1 rounded-md font-bold border border-white/20 hover:bg-white/20 transition-all"
-        >
-          Assessly
+        <Link href="/student" className={linkClass("/student")}>
+          Dashboard
         </Link>
-        <div className="text-blue-200 cursor-default px-2">My courses</div>
-        <div className="text-blue-200 cursor-default px-2">Archive System</div>
       </>
     );
   };
 
+  // Mock notification data
+  const notifications = [
+    { id: 1, text: "System initialized successfully", time: "Just now", icon: <CheckCircle2 size={14} className="text-green-500" /> },
+    { id: 2, text: "Sandbox images built & ready", time: "2m ago", icon: <Info size={14} className="text-blue-500" /> },
+    { id: 3, text: "Database migration complete", time: "5m ago", icon: <CheckCircle2 size={14} className="text-green-500" /> },
+  ];
+
   return (
     <header className="fixed top-0 left-0 right-0 h-[60px] bg-[#4a90e2] text-white flex items-center justify-between px-6 z-[100] shadow-md">
-      <div className="flex items-center gap-8">
-        <div className="flex items-center gap-2 cursor-default">
-          <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center text-[#4a90e2] font-bold">
+      {/* Left: Logo + Nav */}
+      <div className="flex items-center gap-6">
+        <Link
+          href={user ? (user.role === "admin" ? "/admin" : user.role === "instructor" ? "/instructor" : "/student") : "/login"}
+          className="flex items-center gap-2 group"
+        >
+          <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center text-[#4a90e2] font-bold group-hover:scale-110 transition-transform">
             Y
           </div>
-          <span className="text-xl font-bold tracking-tight hidden sm:block">
-            YASAR UNIVERSITY
+          <span className="text-lg font-bold tracking-tight hidden sm:block">
+            ASSESSLY
           </span>
-        </div>
-        
-        <nav className="hidden md:flex items-center gap-6 text-sm font-medium">
+        </Link>
+
+        <div className="hidden md:flex items-center gap-1 bg-white/5 rounded-lg p-1">
           {renderNavLinks()}
-        </nav>
+        </div>
       </div>
 
-      <div className="flex items-center gap-4">
-        <button className="p-2 hover:bg-blue-600 rounded-full transition-colors relative">
-          <Bell size={20} />
-          <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full border-2 border-[#4a90e2]"></span>
-        </button>
-        <button className="p-2 hover:bg-blue-600 rounded-full transition-colors">
-          <MessageSquare size={20} />
-        </button>
-        
-        <div className="h-8 w-[1px] bg-blue-300/30 mx-2"></div>
+      {/* Right: Actions */}
+      <div className="flex items-center gap-2">
+        {/* Notifications */}
+        <div className="relative" ref={notifRef}>
+          <button
+            onClick={() => { setShowNotifications(!showNotifications); setShowMessages(false); setShowDropdown(false); }}
+            className={`p-2 rounded-full transition-colors relative ${showNotifications ? 'bg-blue-600' : 'hover:bg-blue-600'}`}
+            title="Notifications"
+          >
+            <Bell size={20} />
+            <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full border-2 border-[#4a90e2]"></span>
+          </button>
 
-        {process.env.NODE_ENV === 'development' && (
-          <>
-            <div className="relative">
-              <button 
-                onClick={() => setShowDropdown(!showDropdown)}
-                className="flex items-center gap-2 hover:bg-blue-600 p-1 pr-2 rounded-lg transition-colors group"
-              >
-                <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center text-xs font-semibold overflow-hidden">
-                  {activePersona.initials}
-                </div>
-                <span className="text-sm font-medium hidden sm:block">{activePersona.name}</span>
-                <ChevronDown size={16} className={`text-blue-200 transition-transform ${showDropdown ? 'rotate-180' : ''}`} />
-              </button>
-
-              {showDropdown && (
-                <div className="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-2xl py-2 text-gray-800 border border-gray-100 animate-in fade-in slide-in-from-top-2 duration-200">
-                  <div className="px-4 py-2 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Switch User</div>
-                  {personas.map((p) => (
-                    <button
-                      key={p.name}
-                      onClick={() => {
-                        setActivePersona(p);
-                        setShowDropdown(false);
-                      }}
-                      className={`w-full text-left px-4 py-3 flex items-center gap-3 hover:bg-blue-50 transition-colors ${activePersona.name === p.name ? 'bg-blue-50 text-[#4a90e2]' : ''}`}
-                    >
-                      <div className={`w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-bold ${activePersona.name === p.name ? 'bg-[#4a90e2] text-white' : 'bg-gray-100 text-gray-600'}`}>
-                        {p.initials}
-                      </div>
-                      <div className="flex flex-col">
-                        <span className="text-sm font-semibold leading-none">{p.name}</span>
-                        <span className="text-[10px] opacity-70 mt-1 capitalize">{p.role === 'admin' ? 'IT Administrator' : p.role}</span>
-                      </div>
-                    </button>
-                  ))}
-                  <div className="border-t border-gray-100 mt-2 pt-2">
-                    <button className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2">
-                      Log out
-                    </button>
+          {showNotifications && (
+            <div className="absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-2xl border border-gray-100 z-50 overflow-hidden">
+              <div className="px-4 py-3 bg-gray-50 border-b border-gray-100 flex items-center justify-between">
+                <span className="text-sm font-bold text-gray-800">Notifications</span>
+                <button onClick={() => setShowNotifications(false)} className="text-gray-400 hover:text-gray-600">
+                  <X size={14} />
+                </button>
+              </div>
+              <div className="max-h-64 overflow-y-auto">
+                {notifications.map((n) => (
+                  <div key={n.id} className="px-4 py-3 hover:bg-blue-50 transition-colors border-b border-gray-50 flex items-start gap-3">
+                    <div className="mt-0.5">{n.icon}</div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm text-gray-800 leading-snug">{n.text}</p>
+                      <p className="text-xs text-gray-400 mt-1 flex items-center gap-1">
+                        <Clock size={10} /> {n.time}
+                      </p>
+                    </div>
                   </div>
-                </div>
-              )}
-            </div>
-
-            <div className="hidden lg:flex items-center gap-2 ml-4">
-              <span className="text-xs text-blue-100 uppercase font-bold tracking-wider">Edit mode</span>
-              <div className="w-10 h-5 bg-blue-800 rounded-full relative cursor-pointer shadow-inner">
-                 <div className={`absolute transition-all duration-200 top-1 w-3 h-3 bg-white rounded-full ${activePersona.role === 'student' ? 'left-1' : 'left-6 bg-blue-400'}`}></div>
+                ))}
+              </div>
+              <div className="px-4 py-2.5 bg-gray-50 border-t border-gray-100">
+                <p className="text-xs text-center text-gray-400">All caught up!</p>
               </div>
             </div>
-          </>
+          )}
+        </div>
+
+        {/* Messages */}
+        <div className="relative" ref={msgRef}>
+          <button
+            onClick={() => { setShowMessages(!showMessages); setShowNotifications(false); setShowDropdown(false); }}
+            className={`p-2 rounded-full transition-colors ${showMessages ? 'bg-blue-600' : 'hover:bg-blue-600'}`}
+            title="Messages"
+          >
+            <MessageSquare size={20} />
+          </button>
+
+          {showMessages && (
+            <div className="absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-2xl border border-gray-100 z-50 overflow-hidden">
+              <div className="px-4 py-3 bg-gray-50 border-b border-gray-100 flex items-center justify-between">
+                <span className="text-sm font-bold text-gray-800">Messages</span>
+                <button onClick={() => setShowMessages(false)} className="text-gray-400 hover:text-gray-600">
+                  <X size={14} />
+                </button>
+              </div>
+              <div className="px-6 py-8 text-center">
+                <MessageSquare size={32} className="mx-auto text-gray-300 mb-3" />
+                <p className="text-sm font-medium text-gray-500">No messages yet</p>
+                <p className="text-xs text-gray-400 mt-1">Course discussions will appear here</p>
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="h-8 w-[1px] bg-blue-300/30 mx-1"></div>
+
+        {/* User Menu */}
+        {isAuthenticated && user ? (
+          <div className="relative" ref={dropdownRef}>
+            <button
+              onClick={() => { setShowDropdown(!showDropdown); setShowNotifications(false); setShowMessages(false); }}
+              className="flex items-center gap-2 hover:bg-blue-600 p-1 pr-2 rounded-lg transition-colors"
+            >
+              <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center text-xs font-semibold">
+                {getInitials(user.name)}
+              </div>
+              <span className="text-sm font-medium hidden sm:block">{user.name}</span>
+              <ChevronDown
+                size={16}
+                className={`text-blue-200 transition-transform ${showDropdown ? "rotate-180" : ""}`}
+              />
+            </button>
+
+            {showDropdown && (
+              <div className="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-2xl py-0 text-gray-800 border border-gray-100 z-50 overflow-hidden">
+                <div className="px-4 py-3 bg-gray-50 border-b border-gray-100">
+                  <p className="text-sm font-semibold text-gray-900">{user.name}</p>
+                  <p className="text-xs text-gray-500 truncate">{user.email}</p>
+                  <span className="inline-block mt-1 px-2 py-0.5 bg-blue-50 text-[#4a90e2] text-[10px] font-bold uppercase rounded-full">
+                    {user.role}
+                  </span>
+                </div>
+                <button
+                  onClick={handleLogout}
+                  className="w-full text-left px-4 py-3 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2 transition-colors"
+                >
+                  <LogOut size={16} />
+                  Log out
+                </button>
+              </div>
+            )}
+          </div>
+        ) : (
+          <Link
+            href="/login"
+            className="text-sm font-medium bg-white/10 px-4 py-2 rounded-lg hover:bg-white/20 transition-all"
+          >
+            Sign In
+          </Link>
         )}
       </div>
     </header>

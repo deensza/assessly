@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { ShieldCheck, Mail, Lock, User, ArrowRight, GraduationCap, Landmark, Database, Loader2 } from "lucide-react";
@@ -13,8 +13,17 @@ export default function LoginPage() {
   const [role, setRole] = useState("student");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const { login, register } = useAuth();
+  const { login, register, user, isAuthenticated } = useAuth();
   const router = useRouter();
+
+  // Zaten giriş yapmışsa dashboard'a yönlendir
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      if (user.role === "admin") router.replace("/admin");
+      else if (user.role === "instructor") router.replace("/instructor");
+      else router.replace("/student");
+    }
+  }, [isAuthenticated, user, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
