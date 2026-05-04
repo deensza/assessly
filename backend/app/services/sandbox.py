@@ -123,6 +123,13 @@ class SandboxService:
         container_backend_dir = os.environ.get('CONTAINER_BACKEND_DIR', '/app')
         host_backend_dir = os.environ.get('HOST_BACKEND_DIR', container_backend_dir)
 
+        # Validate host bind-mount base before using it in Docker volume paths.
+        host_backend_dir = os.path.abspath(host_backend_dir)
+        if '..' in os.path.normpath(host_backend_dir).split(os.sep):
+            raise ValueError('Invalid HOST_BACKEND_DIR')
+        if not os.path.isabs(host_backend_dir):
+            raise ValueError('HOST_BACKEND_DIR must be absolute')
+
         container_tmp_base = os.path.join(container_backend_dir, 'tmp_sandbox')
         host_tmp_base = os.path.join(host_backend_dir, 'tmp_sandbox')
 

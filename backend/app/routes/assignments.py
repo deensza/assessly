@@ -85,7 +85,7 @@ def get_assignment(assignment_id):
 @jwt_required
 def list_course_assignments(course_id):
     """List all assignments for a course."""
-    course = Course.query.get_or_404(course_id)
+    Course.query.get_or_404(course_id)
     user = g.current_user
 
     # Check student is enrolled
