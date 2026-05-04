@@ -1,6 +1,3 @@
-import subprocess
-import tempfile
-import os
 from flask import Blueprint, request, jsonify, g, current_app
 from app import db
 from app.models import Submission, Assignment, TestCase, Course, CourseEnrollment, UserRole, SubmissionStatus
