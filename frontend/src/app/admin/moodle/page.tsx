@@ -79,7 +79,7 @@ export default function AdminMoodleBridge() {
     if (!apiUrl.trim()) return;
     const tokenToSave = token.startsWith('••') ? '' : token;
     try {
-      setSaving(true); await adminApi.saveMoodleConfig(apiUrl, tokenToSave); setHasToken(true);
+      setSaving(true); await adminApi.saveMoodleConfig(apiUrl, tokenToSave, true); setHasToken(true);
       if (tokenToSave) setToken("••••••••••••••••");
       setSyncLogs(prev => [{ id: Date.now(), event: 'Config Saved', target: apiUrl, timestamp: new Date().toLocaleString('tr-TR', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' }), status: 'Success' }, ...prev].slice(0, 20));
     } catch (err) { console.error('Save failed', err); }
