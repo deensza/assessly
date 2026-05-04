@@ -34,7 +34,6 @@ services:
       - DATABASE_URL=${DATABASE_URL}
       - SANDBOX_TIME_LIMIT=${SANDBOX_TIME_LIMIT:-10}
       - SANDBOX_MEMORY_LIMIT=${SANDBOX_MEMORY_LIMIT:-256}
-      - HOST_BACKEND_DIR=${PWD}/backend
     volumes:
       - ./backend:/app
       - /var/run/docker.sock:/var/run/docker.sock

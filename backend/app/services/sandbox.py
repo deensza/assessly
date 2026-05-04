@@ -7,6 +7,8 @@ in strict isolation: no network, limited memory/CPU, read-only filesystem.
 
 import os
 import time
+import io
+import tarfile
 import logging
 import tempfile
 import docker
@@ -73,6 +75,18 @@ class SandboxService:
             except Exception as e:
                 raise RuntimeError(f"Docker is not available: {e}")
 
+    def _make_sandbox_archive(self, tmp_dir):
+        """Create an in-memory tar archive for files copied into the sandbox container."""
+        archive = io.BytesIO()
+
+        with tarfile.open(fileobj=archive, mode='w') as tar:
+            for item in os.listdir(tmp_dir):
+                file_path = os.path.join(tmp_dir, item)
+                tar.add(file_path, arcname=item)
+
+        archive.seek(0)
+        return archive.getvalue()
+
     def run_code(self, code: str, language: str, stdin_input: str = '',
                  time_limit: int = None, memory_limit: str = None) -> dict:
         """
@@ -111,34 +125,15 @@ class SandboxService:
                 if 'class ' not in code:
                     code = f'public class Solution {{\n{code}\n}}'
 
-        # Create temp directory in a host-visible backend folder.
-        #
-        # Important:
-        # This backend container talks to the host Docker daemon through
-        # /var/run/docker.sock. Therefore Docker bind mount source paths must be
-        # valid on the HOST, not only inside the backend container.
-        #
-        # /app/tmp_sandbox is inside the backend bind mount, while HOST_BACKEND_DIR
-        # points to the same folder from the host perspective.
+        # Create temp directory inside the backend container.
+        # Files are copied into the execution container using Docker put_archive,
+        # so no host bind-mount path is needed.
         container_backend_dir = os.environ.get('CONTAINER_BACKEND_DIR', '/app')
-        host_backend_dir = os.environ.get('HOST_BACKEND_DIR', container_backend_dir)
-
-        # Validate host bind-mount base before using it in Docker volume paths.
-        host_backend_dir = os.path.abspath(host_backend_dir)
-        if '..' in os.path.normpath(host_backend_dir).split(os.sep):
-            raise ValueError('Invalid HOST_BACKEND_DIR')
-        if not os.path.isabs(host_backend_dir):
-            raise ValueError('HOST_BACKEND_DIR must be absolute')
-
         container_tmp_base = os.path.join(container_backend_dir, 'tmp_sandbox')
-        host_tmp_base = os.path.join(host_backend_dir, 'tmp_sandbox')
 
         os.makedirs(container_tmp_base, exist_ok=True)
 
         tmp_dir = tempfile.mkdtemp(prefix='assessly_', dir=container_tmp_base)
-        tmp_dir_name = os.path.basename(tmp_dir)
-        host_tmp_dir = os.path.join(host_tmp_base, tmp_dir_name)
-
         code_path = os.path.join(tmp_dir, filename)
 
         try:
@@ -164,11 +159,9 @@ class SandboxService:
             # Run container with strict isolation
             start_time = time.time()
 
-            container = self.client.containers.run(
+            container = self.client.containers.create(
                 image=image,
                 command=cmd,
-                detach=True,
-                volumes={host_tmp_dir: {'bind': '/sandbox', 'mode': 'rw'}},
                 network_mode='none',          # No network access
                 mem_limit=mem_limit,           # Memory limit
                 nano_cpus=int(self.cpu_limit * 1e9),  # CPU limit
@@ -177,6 +170,10 @@ class SandboxService:
                 working_dir='/sandbox',
                 environment={'PYTHONDONTWRITEBYTECODE': '1'},
             )
+
+            archive_data = self._make_sandbox_archive(tmp_dir)
+            container.put_archive('/sandbox', archive_data)
+            container.start()
 
             # Wait for completion with timeout
             try:
