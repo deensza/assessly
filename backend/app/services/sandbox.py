@@ -145,12 +145,17 @@ class SandboxService:
             # Allow the non-root sandbox user inside the execution container
             # to enter the mounted directory and read the files.
             os.chmod(tmp_dir, 0o777)
+            # codeql[py/path-injection]: code_path is created under a server-controlled
+            # tempfile directory and filename is selected from a fixed language map.
             os.chmod(code_path, 0o644)
 
             # Write stdin input to a file and pipe it via shell redirection
             stdin_file = os.path.join(tmp_dir, 'input.txt')
+            # codeql[py/path-injection]: stdin_file is created under the same
+            # server-controlled tempfile directory with a constant filename.
             with open(stdin_file, 'w', encoding='utf-8') as f:
                 f.write(stdin_input if stdin_input else '')
+            # codeql[py/path-injection]: stdin_file is server-controlled.
             os.chmod(stdin_file, 0o644)
 
             # Build the command with stdin redirection from input file
