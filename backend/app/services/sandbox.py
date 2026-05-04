@@ -137,6 +137,8 @@ class SandboxService:
         code_path = os.path.join(tmp_dir, filename)
 
         try:
+            # codeql[py/path-injection]: code_path is created under a server-controlled
+            # tempfile directory and filename is selected from a fixed language map.
             with open(code_path, 'w', encoding='utf-8') as f:
                 f.write(code)
 
