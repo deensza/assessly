@@ -6,9 +6,9 @@ services:
     ports:
       - "5432:5432"
     environment:
-      POSTGRES_DB: assessly
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: ${POSTGRES_DB:-assessly}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
@@ -29,11 +29,11 @@ services:
       - "5001:5001"
     environment:
       - FLASK_ENV=development
-      - SECRET_KEY=assessly-secret-key-dev
-      - JWT_SECRET_KEY=assessly-jwt-secret-dev
-      - DATABASE_URL=postgresql://postgres:postgres@db:5432/assessly
-      - SANDBOX_TIME_LIMIT=10
-      - SANDBOX_MEMORY_LIMIT=256
+      - SECRET_KEY=${SECRET_KEY}
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
+      - DATABASE_URL=${DATABASE_URL}
+      - SANDBOX_TIME_LIMIT=${SANDBOX_TIME_LIMIT:-10}
+      - SANDBOX_MEMORY_LIMIT=${SANDBOX_MEMORY_LIMIT:-256}
       - HOST_BACKEND_DIR=${PWD}/backend
     volumes:
       - ./backend:/app

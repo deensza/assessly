@@ -20,7 +20,6 @@ import {
   Lock,
   Eye
 } from "lucide-react";
-import Link from "next/link";
 
 interface TestResult {
   test_case_id: number;
@@ -151,9 +150,9 @@ export default function StudentPortal() {
     setView('workspace');
   };
 
-  const enrichedAssignments = assignments.map(a => {
-    const sub = mySubmissions.find(s => s.assignment_id === a.id);
-    const course = courses.find(c => c.id === a.course_id);
+  const enrichedAssignments = assignments.map((a: Assignment) => {
+    const sub = mySubmissions.find((s: Submission) => s.assignment_id === a.id);
+    const course = courses.find((c: Course) => c.id === a.course_id);
     return {
       id: a.id,
       title: a.title,
@@ -164,13 +163,13 @@ export default function StudentPortal() {
       gradeValue: sub?.final_score,
       description: a.description,
       initialCode: "",
-      submittedCode: (sub as any)?.code || null,
+      submittedCode: (sub as Submission & { code?: string })?.code || null,
       submissionId: sub?.id || null
     };
   });
 
-  const filteredEnrichedAssignments = enrichedAssignments.filter(a => 
-    a.title.toLowerCase().includes(studentSearchQuery.toLowerCase()) || 
+  const filteredEnrichedAssignments = enrichedAssignments.filter((a: typeof enrichedAssignments[0]) =>
+    a.title.toLowerCase().includes(studentSearchQuery.toLowerCase()) ||
     a.course.toLowerCase().includes(studentSearchQuery.toLowerCase())
   );
 
