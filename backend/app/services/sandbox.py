@@ -10,7 +10,6 @@ import time
 import io
 import tarfile
 import logging
-import tempfile
 import docker
 from docker.errors import ImageNotFound, APIError
 
@@ -75,14 +74,17 @@ class SandboxService:
             except Exception as e:
                 raise RuntimeError(f"Docker is not available: {e}")
 
-    def _make_sandbox_archive(self, tmp_dir):
-        """Create an in-memory tar archive for files copied into the sandbox container."""
+    def _make_sandbox_archive(self, files):
+        """Create an in-memory tar archive from server-controlled file names and content."""
         archive = io.BytesIO()
 
         with tarfile.open(fileobj=archive, mode='w') as tar:
-            for item in os.listdir(tmp_dir):
-                file_path = os.path.join(tmp_dir, item)
-                tar.add(file_path, arcname=item)
+            for archive_name, content in files.items():
+                data = content.encode('utf-8')
+                info = tarfile.TarInfo(name=archive_name)
+                info.size = len(data)
+                info.mode = 0o644
+                tar.addfile(info, io.BytesIO(data))
 
         archive.seek(0)
         return archive.getvalue()
@@ -125,38 +127,11 @@ class SandboxService:
                 if 'class ' not in code:
                     code = f'public class Solution {{\n{code}\n}}'
 
-        # Create temp directory inside the backend container.
-        # Files are copied into the execution container using Docker put_archive,
-        # so no host bind-mount path is needed.
-        container_backend_dir = os.environ.get('CONTAINER_BACKEND_DIR', '/app')
-        container_tmp_base = os.path.join(container_backend_dir, 'tmp_sandbox')
-
-        os.makedirs(container_tmp_base, exist_ok=True)
-
-        tmp_dir = tempfile.mkdtemp(prefix='assessly_', dir=container_tmp_base)
-        code_path = os.path.join(tmp_dir, filename)
-
         try:
-            # codeql[py/path-injection]: code_path is created under a server-controlled
-            # tempfile directory and filename is selected from a fixed language map.
-            with open(code_path, 'w', encoding='utf-8') as f:
-                f.write(code)
-
-            # Allow the non-root sandbox user inside the execution container
-            # to enter the mounted directory and read the files.
-            os.chmod(tmp_dir, 0o777)
-            # codeql[py/path-injection]: code_path is created under a server-controlled
-            # tempfile directory and filename is selected from a fixed language map.
-            os.chmod(code_path, 0o644)
-
-            # Write stdin input to a file and pipe it via shell redirection
-            stdin_file = os.path.join(tmp_dir, 'input.txt')
-            # codeql[py/path-injection]: stdin_file is created under the same
-            # server-controlled tempfile directory with a constant filename.
-            with open(stdin_file, 'w', encoding='utf-8') as f:
-                f.write(stdin_input if stdin_input else '')
-            # codeql[py/path-injection]: stdin_file is server-controlled.
-            os.chmod(stdin_file, 0o644)
+            archive_data = self._make_sandbox_archive({
+                filename: code,
+                'input.txt': stdin_input if stdin_input else '',
+            })
 
             # Build the command with stdin redirection from input file
             cmd_str = LANGUAGE_COMMANDS[language](filename)
@@ -178,7 +153,6 @@ class SandboxService:
                 environment={'PYTHONDONTWRITEBYTECODE': '1'},
             )
 
-            archive_data = self._make_sandbox_archive(tmp_dir)
             container.put_archive('/sandbox', archive_data)
             container.start()
 
@@ -245,12 +219,11 @@ class SandboxService:
                 'error': str(e)
             }
         finally:
-            # Cleanup temp directory
-            try:
-                import shutil
-                shutil.rmtree(tmp_dir, ignore_errors=True)
-            except Exception:
-                pass
+            if 'container' in locals():
+                try:
+                    container.remove(force=True)
+                except Exception:
+                    pass
 
     def check_image(self, language: str) -> bool:
         """Check if the sandbox image for a language exists."""
