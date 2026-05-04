@@ -5,6 +5,7 @@ import { coursesApi, assignmentsApi, submissionsApi, Course, Assignment, Submiss
 import { Activity, CheckCircle2, AlertTriangle, Clock, Sliders, Save, Target, ShieldAlert, Cpu, Code2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { useAuth } from "@/context/AuthContext";
 
 export default function InstructorDashboard() {
   const [weights, setWeights] = useState({
@@ -24,6 +25,7 @@ export default function InstructorDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
+  const { user } = useAuth();
 
   const handleSavePolicy = () => {
     alert("Assessly Policy successfully updated and saved for all future assignments!");
@@ -101,7 +103,7 @@ export default function InstructorDashboard() {
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end bg-white p-8 rounded-2xl border border-gray-100 shadow-sm gap-4">
         <div>
           <h1 className="text-3xl font-extrabold tracking-tight text-gray-900">Overview</h1>
-          <p className="text-gray-500 mt-1 font-medium">Welcome back, Dr. Suphi Ucar.</p>
+          <p className="text-gray-500 mt-1 font-medium">Welcome back, {user?.name || "Instructor"}.</p>
         </div>
         <div className="flex gap-3">
           <button 

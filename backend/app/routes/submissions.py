@@ -1,6 +1,3 @@
-import subprocess
-import tempfile
-import os
 from flask import Blueprint, request, jsonify, g, current_app
 from app import db
 from app.models import Submission, Assignment, TestCase, Course, CourseEnrollment, UserRole, SubmissionStatus
@@ -13,13 +10,28 @@ submissions_bp = Blueprint('submissions', __name__)
 @submissions_bp.route('/run-tests', methods=['POST'])
 @role_required('student')
 def run_tests():
-    """Run student code against visible test cases (dry run, no submission)."""
+    """Run student code against visible test cases using Docker sandbox."""
     data = request.get_json()
 
     if not data or 'assignment_id' not in data or 'code' not in data or 'language' not in data:
         return jsonify({'error': 'assignment_id, code, and language are required'}), 400
 
     assignment = Assignment.query.get_or_404(data['assignment_id'])
+
+    # Verify language is supported
+    language = data['language']
+    if language not in assignment.supported_languages:
+        return jsonify({
+            'error': f'Language not supported. Allowed: {assignment.supported_languages}'
+        }), 400
+
+    # Verify student is enrolled in the course
+    enrolled = CourseEnrollment.query.filter_by(
+        course_id=assignment.course_id,
+        student_id=g.current_user.id
+    ).first()
+    if not enrolled:
+        return jsonify({'error': 'Not enrolled in this course'}), 403
 
     # Get only visible test cases
     test_cases = TestCase.query.filter_by(
@@ -34,86 +46,42 @@ def run_tests():
             'summary': {'total': 0, 'passed': 0, 'failed': 0}
         }), 200
 
+    from app.services.sandbox import sandbox_service
+
+    if sandbox_service.client is None:
+        sandbox_service.init_app(current_app)
+
     results = []
-    language = data['language']
     code = data['code']
 
     for tc in test_cases:
-        try:
-            # Write code to a temp file
-            if language == 'python':
-                suffix = '.py'
-                cmd_prefix = ['python3']
-            elif language == 'java':
-                suffix = '.java'
-                cmd_prefix = ['java']
-            elif language in ('c', 'cpp'):
-                suffix = '.c'
-                cmd_prefix = ['gcc', '-o']
-            else:
-                suffix = '.py'
-                cmd_prefix = ['python3']
+        sandbox_result = sandbox_service.run_code(
+            code=code,
+            language=language,
+            stdin_input=tc.input,
+            time_limit=assignment.time_limit_seconds,
+            memory_limit=f"{assignment.memory_limit_mb}m"
+        )
 
-            with tempfile.NamedTemporaryFile(mode='w', suffix=suffix, delete=False, dir='/tmp') as f:
-                f.write(code)
-                f.flush()
-                code_path = f.name
+        actual_output = (sandbox_result.get('stdout') or '').strip()
+        expected_output = tc.expected_output.strip()
+        passed = (
+            actual_output == expected_output
+            and sandbox_result.get('exit_code') == 0
+            and not sandbox_result.get('timed_out')
+        )
 
-            try:
-                if language == 'python':
-                    proc = subprocess.run(
-                        ['python3', code_path],
-                        input=tc.input,
-                        capture_output=True,
-                        text=True,
-                        timeout=assignment.time_limit_seconds
-                    )
-                else:
-                    # For non-python, just run python for now (sandbox limitation)
-                    proc = subprocess.run(
-                        ['python3', code_path],
-                        input=tc.input,
-                        capture_output=True,
-                        text=True,
-                        timeout=assignment.time_limit_seconds
-                    )
-
-                actual_output = proc.stdout.strip()
-                expected_output = tc.expected_output.strip()
-                passed = actual_output == expected_output
-
-                results.append({
-                    'test_case_id': tc.id,
-                    'input': tc.input,
-                    'expected_output': expected_output,
-                    'actual_output': actual_output,
-                    'stderr': proc.stderr[:500] if proc.stderr else None,
-                    'passed': passed,
-                    'error': None
-                })
-            except subprocess.TimeoutExpired:
-                results.append({
-                    'test_case_id': tc.id,
-                    'input': tc.input,
-                    'expected_output': tc.expected_output.strip(),
-                    'actual_output': None,
-                    'stderr': None,
-                    'passed': False,
-                    'error': f'Time limit exceeded ({assignment.time_limit_seconds}s)'
-                })
-            finally:
-                os.unlink(code_path)
-
-        except Exception as e:
-            results.append({
-                'test_case_id': tc.id,
-                'input': tc.input,
-                'expected_output': tc.expected_output.strip(),
-                'actual_output': None,
-                'stderr': None,
-                'passed': False,
-                'error': str(e)
-            })
+        results.append({
+            'test_case_id': tc.id,
+            'input': tc.input,
+            'expected_output': expected_output,
+            'actual_output': actual_output,
+            'stderr': sandbox_result.get('stderr') or None,
+            'passed': passed,
+            'execution_time_ms': sandbox_result.get('execution_time_ms'),
+            'timed_out': sandbox_result.get('timed_out'),
+            'error': sandbox_result.get('error')
+        })
 
     passed_count = sum(1 for r in results if r['passed'])
 

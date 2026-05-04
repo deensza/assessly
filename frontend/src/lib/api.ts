@@ -25,6 +25,11 @@ export interface Assignment {
   supported_languages: string[];
   time_limit_seconds: number;
   memory_limit_mb: number;
+  created_at: string;
+  weight_correctness?: number;
+  weight_plagiarism?: number;
+  weight_structural?: number;
+  weight_ai?: number;
   test_cases?: TestCase[];
 }
 
@@ -149,6 +154,10 @@ export const coursesApi = {
   },
   async enroll(courseId: number) {
     const res = await api.post(`/courses/${courseId}/enroll`);
+    return res.data;
+  },
+  async students() {
+    const res = await api.get('/courses/students');
     return res.data;
   },
 };

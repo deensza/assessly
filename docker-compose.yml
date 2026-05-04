@@ -26,7 +26,7 @@ services:
       dockerfile: Dockerfile
     container_name: assessly-backend
     ports:
-      - "5001:5000"
+      - "5001:5001"
     environment:
       - FLASK_ENV=development
       - SECRET_KEY=${SECRET_KEY}

@@ -73,9 +73,6 @@ class TokenBasedPlagiarismStrategy(AnalysisStrategy):
         max_similarity = 0.0
 
         for other_code in all_submissions:
-            if other_code == submission_code:
-                continue  # Kendisiyle karşılaştırma
-
             if language == "python":
                 other_tokens = self._tokenize_code(other_code)
             else:
