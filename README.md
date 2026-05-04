@@ -375,6 +375,26 @@ docker-compose down -v       # stop and remove database volume
 - All API endpoints (except auth) require JWT authentication
 - Role-based access control: students can only see their own submissions, instructors see all for their courses
 
+## Branching Strategy
+
+The team follows a **feature-branch workflow**:
+
+- `main` — stable, production-ready code. Direct pushes only for hotfixes.
+- `<name>-branch` — each team member works on their own branch and opens a Pull Request to merge into `main`.
+
+| Branch | Owner | Purpose |
+|---|---|---|
+| `main` | All | Stable release branch |
+| `deniz-branch` | Bermal Deniz Akkaya | Frontend & merge management |
+| `ozgur` | Özgür Can Güngör | Backend API & Docker pipeline |
+| `berkan-branch` | Berkan Mursal | Frontend dashboards |
+| `IremXErkan-patch-1` | İrem Şura Erkan | Project architecture & analysis strategies |
+| `fixs-updates` | Shared | Hotfixes & minor updates |
+
+All changes go through Pull Requests before merging into `main`.
+
+---
+
 ## Repository Purpose
 This repository demonstrates collaborative Git and GitHub workflows including:
 - Branch creation
