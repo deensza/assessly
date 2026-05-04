@@ -10,7 +10,7 @@ import time
 import logging
 import tempfile
 import docker
-from docker.errors import ContainerError, ImageNotFound, APIError
+from docker.errors import ImageNotFound, APIError
 
 logger = logging.getLogger(__name__)
 

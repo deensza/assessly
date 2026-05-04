@@ -65,7 +65,7 @@ def list_all_courses():
 @role_required('student')
 def enroll(course_id):
     """Student enrolls in a course."""
-    course = Course.query.get_or_404(course_id)
+    Course.query.get_or_404(course_id)
 
     # Check if already enrolled
     existing = CourseEnrollment.query.filter_by(
