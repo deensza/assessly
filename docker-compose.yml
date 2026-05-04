@@ -26,7 +26,7 @@ services:
       dockerfile: Dockerfile
     container_name: assessly-backend
     ports:
-      - "5001:5000"
+      - "5001:5001"
     environment:
       - FLASK_ENV=development
       - SECRET_KEY=assessly-secret-key-dev
@@ -34,6 +34,7 @@ services:
       - DATABASE_URL=postgresql://postgres:postgres@db:5432/assessly
       - SANDBOX_TIME_LIMIT=10
       - SANDBOX_MEMORY_LIMIT=256
+      - HOST_BACKEND_DIR=${PWD}/backend
     volumes:
       - ./backend:/app
       - /var/run/docker.sock:/var/run/docker.sock

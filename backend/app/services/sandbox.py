@@ -111,18 +111,43 @@ class SandboxService:
                 if 'class ' not in code:
                     code = f'public class Solution {{\n{code}\n}}'
 
-        # Create temp directory with the code file
-        tmp_dir = tempfile.mkdtemp(prefix='assessly_')
+        # Create temp directory in a host-visible backend folder.
+        #
+        # Important:
+        # This backend container talks to the host Docker daemon through
+        # /var/run/docker.sock. Therefore Docker bind mount source paths must be
+        # valid on the HOST, not only inside the backend container.
+        #
+        # /app/tmp_sandbox is inside the backend bind mount, while HOST_BACKEND_DIR
+        # points to the same folder from the host perspective.
+        container_backend_dir = os.environ.get('CONTAINER_BACKEND_DIR', '/app')
+        host_backend_dir = os.environ.get('HOST_BACKEND_DIR', container_backend_dir)
+
+        container_tmp_base = os.path.join(container_backend_dir, 'tmp_sandbox')
+        host_tmp_base = os.path.join(host_backend_dir, 'tmp_sandbox')
+
+        os.makedirs(container_tmp_base, exist_ok=True)
+
+        tmp_dir = tempfile.mkdtemp(prefix='assessly_', dir=container_tmp_base)
+        tmp_dir_name = os.path.basename(tmp_dir)
+        host_tmp_dir = os.path.join(host_tmp_base, tmp_dir_name)
+
         code_path = os.path.join(tmp_dir, filename)
 
         try:
             with open(code_path, 'w', encoding='utf-8') as f:
                 f.write(code)
 
+            # Allow the non-root sandbox user inside the execution container
+            # to enter the mounted directory and read the files.
+            os.chmod(tmp_dir, 0o777)
+            os.chmod(code_path, 0o644)
+
             # Write stdin input to a file and pipe it via shell redirection
             stdin_file = os.path.join(tmp_dir, 'input.txt')
             with open(stdin_file, 'w', encoding='utf-8') as f:
                 f.write(stdin_input if stdin_input else '')
+            os.chmod(stdin_file, 0o644)
 
             # Build the command with stdin redirection from input file
             cmd_str = LANGUAGE_COMMANDS[language](filename)
@@ -136,7 +161,7 @@ class SandboxService:
                 image=image,
                 command=cmd,
                 detach=True,
-                volumes={tmp_dir: {'bind': '/sandbox', 'mode': 'rw'}},
+                volumes={host_tmp_dir: {'bind': '/sandbox', 'mode': 'rw'}},
                 network_mode='none',          # No network access
                 mem_limit=mem_limit,           # Memory limit
                 nano_cpus=int(self.cpu_limit * 1e9),  # CPU limit
