@@ -295,6 +295,76 @@ assessly/
 └── docker-compose.yml
 ```
 
+## Local Setup
+
+### Prerequisites
+
+- [Docker](https://www.docker.com/get-started) & Docker Compose (v2+)
+- [Git](https://git-scm.com/)
+
+### 1. Clone the repository
+
+```bash
+git clone https://github.com/deensza/assessly.git
+cd assessly
+```
+
+### 2. Configure environment variables
+
+```bash
+cp .env.example .env
+```
+
+Open `.env` and set the required values:
+
+```env
+SECRET_KEY=your-secret-key-here
+JWT_SECRET_KEY=your-jwt-secret-here
+POSTGRES_PASSWORD=your-db-password
+```
+
+### 3. Build and start all services
+
+```bash
+docker-compose up --build
+```
+
+This command starts:
+- **PostgreSQL** database on port `5432`
+- **Flask backend** on port `5000`
+- **Next.js frontend** on port `3000`
+- **Sandbox images** (Python, Java, C) for code execution
+
+### 4. Initialize the database
+
+```bash
+docker-compose exec backend python init_db.py
+```
+
+### 5. Access the application
+
+| Service | URL |
+|---|---|
+| Frontend | http://localhost:3000 |
+| Backend API | http://localhost:5000 |
+| API Docs (Swagger) | http://localhost:5000/docs |
+
+### Default roles
+
+Register a new user and select a role:
+- `student` — submit code, view results
+- `instructor` — create assignments, view submissions
+- `admin` — configure sandbox limits, Moodle integration
+
+### Stopping the application
+
+```bash
+docker-compose down          # stop containers
+docker-compose down -v       # stop and remove database volume
+```
+
+---
+
 ## Important Notes
 
 - Always validate and sanitize submitted code before execution
