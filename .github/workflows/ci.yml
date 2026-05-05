@@ -24,11 +24,15 @@ jobs:
         run: |
           pip install --upgrade pip
           pip install -r requirements.txt
-          pip install flake8
+          pip install flake8 pytest
 
       - name: Lint with flake8
         working-directory: backend
         run: flake8 app/ --max-line-length=160 --exclude=migrations/ --extend-ignore=W293,W291
+
+      - name: Run tests
+        working-directory: backend
+        run: pytest tests/ -v
 
   frontend-lint:
     name: Frontend — Lint
