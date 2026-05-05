@@ -1,5 +1,7 @@
 # Assessly — Automated Programming Assignment Evaluation System
 
+**Live Demo:** [https://deensza.github.io/assessly/](https://deensza.github.io/assessly/)
+
 ## Project Overview
 
 Assessly is an automated programming assignment evaluation platform designed to assist instructors in grading programming assignments efficiently and fairly. The system evaluates student submissions automatically by executing code in a secure environment, running predefined test cases, and generating transparent grading reports. Assessly also integrates advanced analysis features such as plagiarism detection and AI-generated code probability estimation. By combining automated evaluation with intelligent analysis, the system helps maintain academic integrity while significantly reducing the manual grading workload for instructors. The platform integrates with Moodle and executes student submissions securely using Docker-based sandbox environments.
