@@ -21,10 +21,15 @@ def create_app(config_name=None):
     # Initialize extensions
     db.init_app(app)
     migrate.init_app(app, db)
-    CORS(app, origins=[
+    allowed_origins = [
         "http://localhost:3000",
-        "http://127.0.0.1:3000"
-    ], supports_credentials=True)
+        "http://127.0.0.1:3000",
+        "https://assessly-ebon.vercel.app",
+    ]
+    extra = os.environ.get("CORS_ORIGIN", "")
+    if extra:
+        allowed_origins.append(extra)
+    CORS(app, origins=allowed_origins, supports_credentials=True)
 
     # Import models so they are registered with SQLAlchemy
     from app import models  # noqa: F401
