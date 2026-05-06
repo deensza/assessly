@@ -1,28 +1,29 @@
 """
-Sandbox Service — Docker-based secure code execution.
+Sandbox Service — Code execution with Docker or subprocess fallback.
 
-Manages the lifecycle of Docker containers for running untrusted student code
-in strict isolation: no network, limited memory/CPU, read-only filesystem.
+When Docker is available, runs code in isolated containers.
+When Docker is unavailable (e.g. Azure App Service), falls back to
+subprocess-based execution with basic resource limits.
 """
 
 import os
+import sys
 import time
 import io
 import tarfile
+import tempfile
+import subprocess
 import logging
-import docker
-from docker.errors import ImageNotFound, APIError
 
 logger = logging.getLogger(__name__)
 
-# Image names for each supported language
+# ---------- Docker-based constants ----------
 LANGUAGE_IMAGES = {
     'python': 'assessly-sandbox-python',
     'java': 'assessly-sandbox-java',
     'c': 'assessly-sandbox-c',
 }
 
-# How to run code for each language
 LANGUAGE_COMMANDS = {
     'python': lambda filename: f'python3 /sandbox/{filename}',
     'java': lambda filename: (
@@ -34,7 +35,6 @@ LANGUAGE_COMMANDS = {
     ),
 }
 
-# File extensions for each language
 LANGUAGE_EXTENSIONS = {
     'python': '.py',
     'java': '.java',
@@ -43,10 +43,11 @@ LANGUAGE_EXTENSIONS = {
 
 
 class SandboxService:
-    """Manages Docker containers for secure code execution."""
+    """Manages code execution — Docker containers or subprocess fallback."""
 
     def __init__(self, app=None):
-        self.client = None
+        self.client = None          # Docker client (None if unavailable)
+        self.docker_available = False
         self.time_limit = 10
         self.memory_limit = '256m'
         self.cpu_limit = 0.5
@@ -60,61 +61,149 @@ class SandboxService:
         self.memory_limit = f'{memory_mb}m'
         self.cpu_limit = app.config.get('SANDBOX_CPU_LIMIT', 0.5)
         try:
-            self.client = docker.from_env()
+            import docker as docker_mod
+            self.client = docker_mod.from_env()
+            self.client.ping()
+            self.docker_available = True
             logger.info("Docker client initialized successfully.")
         except Exception as e:
-            logger.error(f"Failed to initialize Docker client: {e}")
+            logger.warning(f"Docker not available, using subprocess fallback: {e}")
             self.client = None
+            self.docker_available = False
 
-    def _ensure_client(self):
-        """Lazy-initialize Docker client if not already connected."""
-        if self.client is None:
-            try:
-                self.client = docker.from_env()
-            except Exception as e:
-                raise RuntimeError(f"Docker is not available: {e}")
-
-    def _make_sandbox_archive(self, files):
-        """Create an in-memory tar archive from server-controlled file names and content."""
-        archive = io.BytesIO()
-
-        with tarfile.open(fileobj=archive, mode='w') as tar:
-            for archive_name, content in files.items():
-                data = content.encode('utf-8')
-                info = tarfile.TarInfo(name=archive_name)
-                info.size = len(data)
-                info.mode = 0o644
-                tar.addfile(info, io.BytesIO(data))
-
-        archive.seek(0)
-        return archive.getvalue()
-
+    # ------------------------------------------------------------------ #
+    #  Public API                                                         #
+    # ------------------------------------------------------------------ #
     def run_code(self, code: str, language: str, stdin_input: str = '',
                  time_limit: int = None, memory_limit: str = None) -> dict:
         """
-        Execute code inside an isolated Docker container.
+        Execute code and return result dict.
 
         Returns:
-            dict with keys: stdout, stderr, exit_code, execution_time_ms, timed_out, error
+            dict with keys: stdout, stderr, exit_code, execution_time_ms,
+                            timed_out, error
         """
-        self._ensure_client()
+        if language not in LANGUAGE_EXTENSIONS:
+            return self._error_result(f'Unsupported language: {language}')
 
-        if language not in LANGUAGE_IMAGES:
-            return {
-                'stdout': '',
-                'stderr': f'Unsupported language: {language}',
-                'exit_code': 1,
-                'execution_time_ms': 0,
-                'timed_out': False,
-                'error': f'Unsupported language: {language}'
-            }
+        if self.docker_available and self.client is not None:
+            return self._run_docker(code, language, stdin_input,
+                                    time_limit, memory_limit)
+        else:
+            return self._run_subprocess(code, language, stdin_input,
+                                        time_limit)
+
+    # ------------------------------------------------------------------ #
+    #  Subprocess fallback (Azure / no-Docker environments)              #
+    # ------------------------------------------------------------------ #
+    def _run_subprocess(self, code: str, language: str,
+                        stdin_input: str = '', time_limit: int = None) -> dict:
+        """Run code using subprocess — no Docker needed."""
+        timeout = time_limit or self.time_limit
+        ext = LANGUAGE_EXTENSIONS[language]
+
+        try:
+            with tempfile.TemporaryDirectory(prefix='assessly_') as tmpdir:
+                # Write source file
+                if language == 'java':
+                    import re
+                    match = re.search(r'public\s+class\s+(\w+)', code)
+                    filename = (match.group(1) + '.java') if match else 'Solution.java'
+                    if 'class ' not in code:
+                        code = f'public class Solution {{\n{code}\n}}'
+                else:
+                    filename = 'solution' + ext
+
+                src_path = os.path.join(tmpdir, filename)
+                with open(src_path, 'w', encoding='utf-8') as f:
+                    f.write(code)
+
+                # Build command
+                if language == 'python':
+                    cmd = [sys.executable, src_path]
+                elif language == 'java':
+                    # Compile
+                    comp = subprocess.run(
+                        ['javac', src_path],
+                        capture_output=True, text=True, timeout=30, cwd=tmpdir
+                    )
+                    if comp.returncode != 0:
+                        return {
+                            'stdout': '',
+                            'stderr': comp.stderr,
+                            'exit_code': comp.returncode,
+                            'execution_time_ms': 0,
+                            'timed_out': False,
+                            'error': 'Compilation failed'
+                        }
+                    class_name = filename.replace('.java', '')
+                    cmd = ['java', '-cp', tmpdir, class_name]
+                elif language == 'c':
+                    out_path = os.path.join(tmpdir, 'a.out')
+                    comp = subprocess.run(
+                        ['gcc', '-o', out_path, src_path],
+                        capture_output=True, text=True, timeout=30
+                    )
+                    if comp.returncode != 0:
+                        return {
+                            'stdout': '',
+                            'stderr': comp.stderr,
+                            'exit_code': comp.returncode,
+                            'execution_time_ms': 0,
+                            'timed_out': False,
+                            'error': 'Compilation failed'
+                        }
+                    cmd = [out_path]
+                else:
+                    return self._error_result(f'Unsupported language: {language}')
+
+                # Run
+                start = time.time()
+                try:
+                    proc = subprocess.run(
+                        cmd,
+                        input=stdin_input,
+                        capture_output=True,
+                        text=True,
+                        timeout=timeout,
+                        cwd=tmpdir,
+                    )
+                    elapsed = int((time.time() - start) * 1000)
+                    return {
+                        'stdout': proc.stdout.strip(),
+                        'stderr': proc.stderr.strip(),
+                        'exit_code': proc.returncode,
+                        'execution_time_ms': elapsed,
+                        'timed_out': False,
+                        'error': None,
+                    }
+                except subprocess.TimeoutExpired:
+                    elapsed = int((time.time() - start) * 1000)
+                    return {
+                        'stdout': '',
+                        'stderr': 'Execution timed out',
+                        'exit_code': -1,
+                        'execution_time_ms': elapsed,
+                        'timed_out': True,
+                        'error': 'Execution timed out',
+                    }
+        except Exception as e:
+            logger.error(f"Subprocess execution error: {e}")
+            return self._error_result(str(e))
+
+    # ------------------------------------------------------------------ #
+    #  Docker-based execution (original)                                  #
+    # ------------------------------------------------------------------ #
+    def _run_docker(self, code: str, language: str, stdin_input: str = '',
+                    time_limit: int = None, memory_limit: str = None) -> dict:
+        """Execute code inside an isolated Docker container."""
+        from docker.errors import ImageNotFound, APIError
 
         image = LANGUAGE_IMAGES[language]
         ext = LANGUAGE_EXTENSIONS[language]
         timeout = time_limit or self.time_limit
         mem_limit = memory_limit or self.memory_limit
 
-        # For Java, we need to extract class name from the code
         filename = 'solution' + ext
         if language == 'java':
             import re
@@ -123,32 +212,30 @@ class SandboxService:
                 filename = match.group(1) + '.java'
             else:
                 filename = 'Solution.java'
-                # Wrap code in a class if not already in one
                 if 'class ' not in code:
                     code = f'public class Solution {{\n{code}\n}}'
 
+        container = None
         try:
             archive_data = self._make_sandbox_archive({
                 filename: code,
-                'input.txt': stdin_input if stdin_input else '',
+                'input.txt': stdin_input or '',
             })
 
-            # Build the command with stdin redirection from input file
             cmd_str = LANGUAGE_COMMANDS[language](filename)
             cmd_str = f'{cmd_str} < /sandbox/input.txt'
             cmd = ['sh', '-c', cmd_str]
 
-            # Run container with strict isolation
             start_time = time.time()
 
             container = self.client.containers.create(
                 image=image,
                 command=cmd,
-                network_mode='none',          # No network access
-                mem_limit=mem_limit,           # Memory limit
-                nano_cpus=int(self.cpu_limit * 1e9),  # CPU limit
-                pids_limit=50,                 # Limit process count
-                user='sandbox',                # Non-root user
+                network_mode='none',
+                mem_limit=mem_limit,
+                nano_cpus=int(self.cpu_limit * 1e9),
+                pids_limit=50,
+                user='sandbox',
                 working_dir='/sandbox',
                 environment={'PYTHONDONTWRITEBYTECODE': '1'},
             )
@@ -156,13 +243,11 @@ class SandboxService:
             container.put_archive('/sandbox', archive_data)
             container.start()
 
-            # Wait for completion with timeout
             try:
                 result = container.wait(timeout=timeout)
                 exit_code = result.get('StatusCode', 1)
                 timed_out = False
             except Exception:
-                # Timeout — kill the container
                 try:
                     container.kill()
                 except Exception:
@@ -172,15 +257,8 @@ class SandboxService:
 
             elapsed_ms = int((time.time() - start_time) * 1000)
 
-            # Capture output
             stdout = container.logs(stdout=True, stderr=False).decode('utf-8', errors='replace')
             stderr = container.logs(stdout=False, stderr=True).decode('utf-8', errors='replace')
-
-            # Cleanup container
-            try:
-                container.remove(force=True)
-            except Exception:
-                pass
 
             return {
                 'stdout': stdout.strip(),
@@ -192,76 +270,80 @@ class SandboxService:
             }
 
         except ImageNotFound:
-            return {
-                'stdout': '',
-                'stderr': f'Sandbox image not found: {image}. Run `docker build` first.',
-                'exit_code': 1,
-                'execution_time_ms': 0,
-                'timed_out': False,
-                'error': f'Image not found: {image}'
-            }
+            return self._error_result(f'Sandbox image not found: {image}')
         except APIError as e:
-            return {
-                'stdout': '',
-                'stderr': str(e),
-                'exit_code': 1,
-                'execution_time_ms': 0,
-                'timed_out': False,
-                'error': f'Docker API error: {e}'
-            }
+            return self._error_result(f'Docker API error: {e}')
         except Exception as e:
-            return {
-                'stdout': '',
-                'stderr': str(e),
-                'exit_code': 1,
-                'execution_time_ms': 0,
-                'timed_out': False,
-                'error': str(e)
-            }
+            return self._error_result(str(e))
         finally:
-            if 'container' in locals():
+            if container:
                 try:
                     container.remove(force=True)
                 except Exception:
                     pass
 
+    # ------------------------------------------------------------------ #
+    #  Helpers                                                            #
+    # ------------------------------------------------------------------ #
+    def _make_sandbox_archive(self, files):
+        """Create an in-memory tar archive."""
+        archive = io.BytesIO()
+        with tarfile.open(fileobj=archive, mode='w') as tar:
+            for archive_name, content in files.items():
+                data = content.encode('utf-8')
+                info = tarfile.TarInfo(name=archive_name)
+                info.size = len(data)
+                info.mode = 0o644
+                tar.addfile(info, io.BytesIO(data))
+        archive.seek(0)
+        return archive.getvalue()
+
+    @staticmethod
+    def _error_result(msg: str) -> dict:
+        return {
+            'stdout': '',
+            'stderr': msg,
+            'exit_code': 1,
+            'execution_time_ms': 0,
+            'timed_out': False,
+            'error': msg,
+        }
+
     def check_image(self, language: str) -> bool:
         """Check if the sandbox image for a language exists."""
-        self._ensure_client()
+        if not self.docker_available:
+            return False
         image_name = LANGUAGE_IMAGES.get(language)
         if not image_name:
             return False
         try:
             self.client.images.get(image_name)
             return True
-        except ImageNotFound:
+        except Exception:
             return False
 
     def build_images(self, base_path: str = None):
         """Build all sandbox Docker images from their Dockerfiles."""
-        self._ensure_client()
+        if not self.docker_available:
+            return {lang: {'status': 'skipped', 'error': 'Docker not available'}
+                    for lang in LANGUAGE_IMAGES}
         if base_path is None:
             base_path = os.path.abspath(
                 os.path.join(os.path.dirname(__file__), '..', '..', '..', 'docker')
             )
-
         results = {}
         for lang, image_name in LANGUAGE_IMAGES.items():
             dockerfile_dir = os.path.join(base_path, f'sandbox-{lang}')
             if os.path.exists(dockerfile_dir):
                 try:
                     logger.info(f"Building sandbox image: {image_name}")
-                    self.client.images.build(
-                        path=dockerfile_dir,
-                        tag=image_name,
-                        rm=True,
-                    )
+                    self.client.images.build(path=dockerfile_dir, tag=image_name, rm=True)
                     results[lang] = {'status': 'built', 'image': image_name}
                 except Exception as e:
                     results[lang] = {'status': 'error', 'error': str(e)}
             else:
-                results[lang] = {'status': 'skipped', 'error': f'Dockerfile not found at {dockerfile_dir}'}
-
+                results[lang] = {'status': 'skipped',
+                                 'error': f'Dockerfile not found at {dockerfile_dir}'}
         return results
 
 

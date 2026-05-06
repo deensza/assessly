@@ -48,8 +48,9 @@ def run_tests():
 
     from app.services.sandbox import sandbox_service
 
-    if sandbox_service.client is None:
+    if not hasattr(sandbox_service, '_initialized'):
         sandbox_service.init_app(current_app)
+        sandbox_service._initialized = True
 
     results = []
     code = data['code']

@@ -51,8 +51,9 @@ class EvaluatorService:
                 return {'error': 'Assignment not found'}
 
             # Initialize sandbox if needed
-            if sandbox_service.client is None and app:
+            if not hasattr(sandbox_service, '_initialized') and app:
                 sandbox_service.init_app(app)
+                sandbox_service._initialized = True
 
             # Get all test cases
             test_cases = TestCase.query.filter_by(
