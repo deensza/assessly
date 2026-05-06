@@ -28,7 +28,7 @@ jobs:
 
       - name: Lint with flake8
         working-directory: backend
-        run: flake8 app/ --max-line-length=160 --exclude=migrations/ --extend-ignore=W293,W291
+        run: flake8 app/
 
       - name: Run tests
         working-directory: backend
