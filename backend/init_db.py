@@ -23,14 +23,41 @@ with app.app_context():
         db.session.add(instructor)
         db.session.flush()
         
-        # Create Student
-        student = User(
+        # Create Students
+        student_deniz = User(
             name='Deniz Akkaya',
             email='deniz@stu.yasar.edu.tr',
             password_hash=hash_password('password123'),
             role=UserRole.student
         )
-        db.session.add(student)
+        db.session.add(student_deniz)
+        db.session.flush()
+
+        student_ozgur = User(
+            name='Ozgur Can Gungor',
+            email='ozgur@stu.yasar.edu.tr',
+            password_hash=hash_password('password123'),
+            role=UserRole.student
+        )
+        db.session.add(student_ozgur)
+        db.session.flush()
+
+        student_sura = User(
+            name='Irem Sura Erkan',
+            email='sura@stu.yasar.edu.tr',
+            password_hash=hash_password('password123'),
+            role=UserRole.student
+        )
+        db.session.add(student_sura)
+        db.session.flush()
+
+        student_berkan = User(
+            name='Berkan Mursal',
+            email='berkan@stu.yasar.edu.tr',
+            password_hash=hash_password('password123'),
+            role=UserRole.student
+        )
+        db.session.add(student_berkan)
         db.session.flush()
         
         # Create Admin
@@ -51,12 +78,12 @@ with app.app_context():
         db.session.add(course)
         db.session.flush()
         
-        # Enroll student in course
-        enrollment = CourseEnrollment(
-            course_id=course.id,
-            student_id=student.id
-        )
-        db.session.add(enrollment)
+        # Enroll all students in course
+        for student in [student_deniz, student_ozgur, student_sura, student_berkan]:
+            db.session.add(CourseEnrollment(
+                course_id=course.id,
+                student_id=student.id
+            ))
         
         # Create Assignment
         assignment = Assignment(
@@ -104,21 +131,42 @@ with app.app_context():
         print("Database initialized successfully!")
         print("  - Instructor: instructor@yasar.edu.tr / password123")
         print("  - Student:    deniz@stu.yasar.edu.tr / password123")
+        print("  - Student:    ozgur@stu.yasar.edu.tr / password123")
+        print("  - Student:    sura@stu.yasar.edu.tr / password123")
+        print("  - Student:    berkan@stu.yasar.edu.tr / password123")
         print("  - Admin:      admin@yasar.edu.tr / password123")
     else:
         print("Database already contains data.")
 
-    # Always ensure enrollment and admin exist (repair if missing)
-    student = User.query.filter_by(email='deniz@stu.yasar.edu.tr').first()
+    # Always ensure all students, enrollments and admin exist (repair if missing)
     course = Course.query.first()
-    if student and course:
-        existing_enrollment = CourseEnrollment.query.filter_by(
-            course_id=course.id, student_id=student.id
-        ).first()
-        if not existing_enrollment:
-            db.session.add(CourseEnrollment(course_id=course.id, student_id=student.id))
-            db.session.commit()
-            print("  [REPAIR] Student enrollment created.")
+
+    student_list = [
+        ('Deniz Akkaya', 'deniz@stu.yasar.edu.tr'),
+        ('Ozgur Can Gungor', 'ozgur@stu.yasar.edu.tr'),
+        ('Irem Sura Erkan', 'sura@stu.yasar.edu.tr'),
+        ('Berkan Mursal', 'berkan@stu.yasar.edu.tr'),
+    ]
+
+    for name, email in student_list:
+        user = User.query.filter_by(email=email).first()
+        if not user:
+            user = User(
+                name=name,
+                email=email,
+                password_hash=hash_password('password123'),
+                role=UserRole.student
+            )
+            db.session.add(user)
+            db.session.flush()
+            print(f"  [REPAIR] Student {name} created.")
+        if course:
+            existing_enrollment = CourseEnrollment.query.filter_by(
+                course_id=course.id, student_id=user.id
+            ).first()
+            if not existing_enrollment:
+                db.session.add(CourseEnrollment(course_id=course.id, student_id=user.id))
+                print(f"  [REPAIR] Enrollment for {name} created.")
 
     if not User.query.filter_by(email='admin@yasar.edu.tr').first():
         admin = User(
@@ -128,6 +176,8 @@ with app.app_context():
             role=UserRole.admin
         )
         db.session.add(admin)
-        db.session.commit()
         print("  [REPAIR] Admin user created.")
+
+    db.session.commit()
+
 
