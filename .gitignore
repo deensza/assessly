@@ -50,3 +50,9 @@ htmlcov/
 
 # Node
 node_modules/
+.next/
+out/
+
+# Logs
+*.log
+

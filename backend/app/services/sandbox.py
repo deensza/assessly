@@ -7,10 +7,11 @@ in strict isolation: no network, limited memory/CPU, read-only filesystem.
 
 import os
 import time
+import io
+import tarfile
 import logging
-import tempfile
 import docker
-from docker.errors import ContainerError, ImageNotFound, APIError
+from docker.errors import ImageNotFound, APIError
 
 logger = logging.getLogger(__name__)
 
@@ -73,6 +74,21 @@ class SandboxService:
             except Exception as e:
                 raise RuntimeError(f"Docker is not available: {e}")
 
+    def _make_sandbox_archive(self, files):
+        """Create an in-memory tar archive from server-controlled file names and content."""
+        archive = io.BytesIO()
+
+        with tarfile.open(fileobj=archive, mode='w') as tar:
+            for archive_name, content in files.items():
+                data = content.encode('utf-8')
+                info = tarfile.TarInfo(name=archive_name)
+                info.size = len(data)
+                info.mode = 0o644
+                tar.addfile(info, io.BytesIO(data))
+
+        archive.seek(0)
+        return archive.getvalue()
+
     def run_code(self, code: str, language: str, stdin_input: str = '',
                  time_limit: int = None, memory_limit: str = None) -> dict:
         """
@@ -111,18 +127,11 @@ class SandboxService:
                 if 'class ' not in code:
                     code = f'public class Solution {{\n{code}\n}}'
 
-        # Create temp directory with the code file
-        tmp_dir = tempfile.mkdtemp(prefix='assessly_')
-        code_path = os.path.join(tmp_dir, filename)
-
         try:
-            with open(code_path, 'w', encoding='utf-8') as f:
-                f.write(code)
-
-            # Write stdin input to a file and pipe it via shell redirection
-            stdin_file = os.path.join(tmp_dir, 'input.txt')
-            with open(stdin_file, 'w', encoding='utf-8') as f:
-                f.write(stdin_input if stdin_input else '')
+            archive_data = self._make_sandbox_archive({
+                filename: code,
+                'input.txt': stdin_input if stdin_input else '',
+            })
 
             # Build the command with stdin redirection from input file
             cmd_str = LANGUAGE_COMMANDS[language](filename)
@@ -132,11 +141,9 @@ class SandboxService:
             # Run container with strict isolation
             start_time = time.time()
 
-            container = self.client.containers.run(
+            container = self.client.containers.create(
                 image=image,
                 command=cmd,
-                detach=True,
-                volumes={tmp_dir: {'bind': '/sandbox', 'mode': 'rw'}},
                 network_mode='none',          # No network access
                 mem_limit=mem_limit,           # Memory limit
                 nano_cpus=int(self.cpu_limit * 1e9),  # CPU limit
@@ -145,6 +152,9 @@ class SandboxService:
                 working_dir='/sandbox',
                 environment={'PYTHONDONTWRITEBYTECODE': '1'},
             )
+
+            container.put_archive('/sandbox', archive_data)
+            container.start()
 
             # Wait for completion with timeout
             try:
@@ -209,12 +219,11 @@ class SandboxService:
                 'error': str(e)
             }
         finally:
-            # Cleanup temp directory
-            try:
-                import shutil
-                shutil.rmtree(tmp_dir, ignore_errors=True)
-            except Exception:
-                pass
+            if 'container' in locals():
+                try:
+                    container.remove(force=True)
+                except Exception:
+                    pass
 
     def check_image(self, language: str) -> bool:
         """Check if the sandbox image for a language exists."""

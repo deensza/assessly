@@ -234,8 +234,12 @@ class PlagiarismPair(db.Model):
     method = db.Column(db.String(50), nullable=False)
 
     # Relationships
-    submission_a = db.relationship('Submission', foreign_keys=[submission_a_id], backref='plagiarism_as_a')
-    submission_b = db.relationship('Submission', foreign_keys=[submission_b_id], backref='plagiarism_as_b')
+    submission_a = db.relationship(
+        'Submission', foreign_keys=[submission_a_id], backref='plagiarism_as_a'
+    )
+    submission_b = db.relationship(
+        'Submission', foreign_keys=[submission_b_id], backref='plagiarism_as_b'
+    )
 
     def to_dict(self):
         return {

@@ -25,6 +25,11 @@ export interface Assignment {
   supported_languages: string[];
   time_limit_seconds: number;
   memory_limit_mb: number;
+  created_at: string;
+  weight_correctness?: number;
+  weight_plagiarism?: number;
+  weight_structural?: number;
+  weight_ai?: number;
   test_cases?: TestCase[];
 }
 
@@ -151,6 +156,10 @@ export const coursesApi = {
     const res = await api.post(`/courses/${courseId}/enroll`);
     return res.data;
   },
+  async students() {
+    const res = await api.get('/courses/students');
+    return res.data;
+  },
 };
 
 // === Assignments API ===
@@ -232,10 +241,11 @@ export const adminApi = {
     const res = await api.get('/admin/moodle/config');
     return res.data;
   },
-  async saveMoodleConfig(apiUrl: string, token: string) {
+  async saveMoodleConfig(apiUrl: string, token: string, enabled: boolean) {
     const res = await api.put('/admin/moodle/config', {
       api_url: apiUrl,
       token,
+      enabled,
     });
     return res.data;
   },
@@ -243,6 +253,15 @@ export const adminApi = {
     const res = await api.post('/admin/moodle/test', {
       api_url: apiUrl,
       token,
+    });
+    return res.data;
+  },
+  async syncGradeToMoodle(moodle_assignment_id: number, moodle_user_id: number, grade: number, feedback: string = '') {
+    const res = await api.post('/admin/moodle/sync-grade', {
+      moodle_assignment_id,
+      moodle_user_id,
+      grade,
+      feedback
     });
     return res.data;
   },

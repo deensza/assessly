@@ -70,9 +70,6 @@ class ASTPlagiarismStrategy(AnalysisStrategy):
         total_compared = 0
 
         for other_code in all_submissions:
-            if other_code == submission_code:
-                continue
-
             other_ast = self._normalize_ast(other_code)
             if other_ast is None:
                 continue

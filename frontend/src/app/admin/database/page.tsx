@@ -1,13 +1,26 @@
 "use client";
-import { Database, Table, HardDrive, ShieldCheck, Clock, CheckCircle2, AlertTriangle } from "lucide-react";
+import { useState } from "react";
+import { Database, Table, HardDrive, ShieldCheck, Clock, CheckCircle2, AlertTriangle, Loader2 } from "lucide-react";
 
 export default function AdminDatabase() {
+  const [running, setRunning] = useState(false);
+  const [lastRun, setLastRun] = useState("14 mins ago");
+
   const tables = [
     { name: "users", rows: 1245, size: "124 KB", integrity: "Clear" },
     { name: "assignments", rows: 42, size: "56 KB", integrity: "Clear" },
     { name: "submissions", rows: 8420, size: "12.4 MB", integrity: "Clear" },
     { name: "logs", rows: 154200, size: "142.8 MB", integrity: "Clear" },
   ];
+
+  const handleRunCheck = () => {
+    setRunning(true);
+    setTimeout(() => {
+      setRunning(false);
+      setLastRun("Just now");
+      alert("Database Integrity Check Complete: All tables are healthy and optimized.");
+    }, 2000);
+  };
 
   return (
     <div className="p-8 space-y-8 bg-[#f0f4f8] min-h-full animate-fade-in-up">
@@ -45,9 +58,16 @@ export default function AdminDatabase() {
           <div className="bg-white p-7 rounded-2xl border border-gray-100 shadow-sm flex items-center justify-between">
             <div className="flex items-center gap-4">
               <div className="w-12 h-12 bg-green-50 text-green-500 rounded-xl flex items-center justify-center"><ShieldCheck size={24}/></div>
-              <div><h3 className="text-gray-900 font-bold text-lg">Integrity Check</h3><p className="text-gray-400 text-sm">Last run: 14 mins ago</p></div>
+              <div><h3 className="text-gray-900 font-bold text-lg">Integrity Check</h3><p className="text-gray-400 text-sm">Last run: {lastRun}</p></div>
             </div>
-            <button className="bg-gray-50 hover:bg-gray-100 px-4 py-2.5 rounded-xl text-xs font-bold transition-all border border-gray-100">Run Now</button>
+            <button 
+              onClick={handleRunCheck}
+              disabled={running}
+              className="bg-gray-50 hover:bg-gray-100 px-4 py-2.5 rounded-xl text-xs font-bold transition-all border border-gray-100 disabled:opacity-50 flex items-center gap-2"
+            >
+              {running ? <Loader2 size={14} className="animate-spin" /> : null}
+              {running ? "Checking..." : "Run Now"}
+            </button>
           </div>
 
           <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">

@@ -1,8 +1,8 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { submissionsApi } from "@/lib/api";
-import { ArrowLeft, CheckCircle2, XCircle, Clock, Zap, ShieldAlert, BrainCircuit, Award, FileCode2, Loader2, AlertTriangle } from "lucide-react";
+import { submissionsApi, adminApi } from "@/lib/api";
+import { ArrowLeft, CheckCircle2, XCircle, Clock, Zap, ShieldAlert, BrainCircuit, Award, FileCode2, Loader2, AlertTriangle, UploadCloud } from "lucide-react";
 
 type TestResult = { id: number; test_case_id: number; actual_output: string; passed: boolean; execution_time_ms: number | null; memory_usage_kb: number | null; };
 type Submission = { id: number; assignment_id: number; student_id: number; code: string; language: string; status: string; score_correctness: number | null; score_structural: number | null; final_score: number | null; plagiarism_score: number | null; ai_probability: number | null; flagged: boolean; submitted_at: string; test_results: TestResult[]; };
@@ -13,7 +13,25 @@ export default function SubmissionResultPage() {
   const [submission, setSubmission] = useState<Submission | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [syncing, setSyncing] = useState(false);
+  const [syncMessage, setSyncMessage] = useState<{type: 'success'|'error', text: string} | null>(null);
   const submissionId = Number(params.id);
+
+  const handleSyncGrade = async () => {
+    if (!submission) return;
+    try {
+      setSyncing(true);
+      setSyncMessage(null);
+      await adminApi.syncGradeToMoodle(submission.assignment_id, submission.student_id, submission.final_score || 0, "Graded by Assessly");
+      setSyncMessage({type: 'success', text: 'Synced!'});
+      setTimeout(() => setSyncMessage(null), 3000);
+    } catch (err: any) {
+      setSyncMessage({type: 'error', text: 'Sync failed'});
+      setTimeout(() => setSyncMessage(null), 3000);
+    } finally {
+      setSyncing(false);
+    }
+  };
 
   useEffect(() => {
     if (!submissionId) return;
@@ -62,6 +80,19 @@ export default function SubmissionResultPage() {
             <p className="text-sm text-gray-500 font-medium">{submission.language.toUpperCase()} • Submitted {new Date(submission.submitted_at).toLocaleString()}</p>
           </div>
           <div className="ml-auto flex items-center gap-3">
+            {submission.status === "completed" && (
+              <div className="flex items-center gap-2">
+                {syncMessage && <span className={`text-xs font-bold ${syncMessage.type === 'success' ? 'text-green-600' : 'text-red-500'}`}>{syncMessage.text}</span>}
+                <button 
+                  onClick={handleSyncGrade} 
+                  disabled={syncing}
+                  className="flex items-center gap-1.5 bg-[#4a90e2] text-white px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-[#357abd] transition-colors disabled:opacity-50"
+                >
+                  {syncing ? <Loader2 size={14} className="animate-spin" /> : <UploadCloud size={14} />}
+                  Sync to Moodle
+                </button>
+              </div>
+            )}
             {submission.flagged && (
               <span className="flex items-center gap-1.5 bg-red-50 text-red-600 px-3 py-1.5 rounded-lg text-xs font-bold border border-red-100"><AlertTriangle size={14} /> Flagged</span>
             )}

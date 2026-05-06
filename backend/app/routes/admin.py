@@ -1,4 +1,4 @@
-from flask import Blueprint, request, jsonify, current_app
+from flask import Blueprint, request, jsonify
 from app.utils.auth import role_required
 from app.services.moodle import create_moodle_service
 

@@ -19,4 +19,4 @@ RUN python init_db.py || true
 
 EXPOSE 8000
 
-CMD ["gunicorn", "--bind", "0.0.0.0:8000", "--workers", "2", "--timeout", "120", "run:app"]
+CMD ["sh", "-c", "python init_db.py && gunicorn -w 2 -b 0.0.0.0:${PORT:-8000} 'app:create_app()' --timeout 120"]

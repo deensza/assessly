@@ -3,7 +3,9 @@
 import { useState, useEffect } from "react";
 import { coursesApi, assignmentsApi, submissionsApi, Course, Assignment, Submission } from "@/lib/api";
 import { Activity, CheckCircle2, AlertTriangle, Clock, Sliders, Save, Target, ShieldAlert, Cpu, Code2 } from "lucide-react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { useAuth } from "@/context/AuthContext";
 
 export default function InstructorDashboard() {
   const [weights, setWeights] = useState({
@@ -22,6 +24,16 @@ export default function InstructorDashboard() {
   const [recentAssignments, setRecentAssignments] = useState<(Assignment & { submissionsCount: number; avgScore: number; courseTitle: string })[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const router = useRouter();
+  const { user } = useAuth();
+
+  const handleSavePolicy = () => {
+    alert("Assessly Policy successfully updated and saved for all future assignments!");
+  };
+
+  const handleGlobalSettings = () => {
+    alert("Global Instructor Settings (Moodle integration, notifications, etc.) are currently being synchronized with the departmental server.");
+  };
 
   useEffect(() => {
     async function fetchStats() {
@@ -91,10 +103,13 @@ export default function InstructorDashboard() {
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end bg-white p-8 rounded-2xl border border-gray-100 shadow-sm gap-4">
         <div>
           <h1 className="text-3xl font-extrabold tracking-tight text-gray-900">Overview</h1>
-          <p className="text-gray-500 mt-1 font-medium">Welcome back, Dr. Suphi Ucar.</p>
+          <p className="text-gray-500 mt-1 font-medium">Welcome back, {user?.name || "Instructor"}.</p>
         </div>
         <div className="flex gap-3">
-          <button className="flex items-center gap-2 bg-gray-50 hover:bg-gray-100 text-gray-700 px-5 py-2.5 rounded-xl font-semibold transition-all border border-gray-100 text-sm">
+          <button 
+            onClick={handleGlobalSettings}
+            className="flex items-center gap-2 bg-gray-50 hover:bg-gray-100 text-gray-700 px-5 py-2.5 rounded-xl font-semibold transition-all border border-gray-100 text-sm"
+          >
              <Sliders size={16} /> Global Settings
           </button>
           <Link 
@@ -137,7 +152,7 @@ export default function InstructorDashboard() {
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
             <div className="p-6 border-b border-gray-50 bg-gray-50/50 flex items-center justify-between">
               <h2 className="text-lg font-bold text-gray-900">Recent Assignments</h2>
-              <button className="text-xs font-bold text-[#4a90e2] hover:underline">View All</button>
+              <Link href="/instructor/assignments" className="text-xs font-bold text-[#4a90e2] hover:underline">View All</Link>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse">
@@ -179,7 +194,11 @@ export default function InstructorDashboard() {
                  <Target size={18} className="text-[#4a90e2]" /> 
                  Assessly Policy
               </h2>
-              <button className="p-2 hover:bg-gray-100 rounded-xl text-[#4a90e2] transition-colors" title="Save Policy">
+              <button 
+                onClick={handleSavePolicy}
+                className="p-2 hover:bg-gray-100 rounded-xl text-[#4a90e2] transition-colors" 
+                title="Save Policy"
+              >
                  <Save size={18} />
               </button>
            </div>

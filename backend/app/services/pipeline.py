@@ -42,15 +42,14 @@ def run_evaluation_pipeline(app, submission_id: int):
         with app.app_context():
             submission = Submission.query.get(submission_id)
             submission.score_correctness = correctness_score
+            db.session.commit()
 
-        # Step 2: Analyze
-        from app.services.strategies import (
-            TokenBasedPlagiarismStrategy,
-            ASTPlagiarismStrategy,
-            AIProbabilityStrategy,
-        )
+        # Step 2: Analyze — real local strategy implementations
         from app.models import PlagiarismPair
-        
+        from app.services.strategies.plagiarism_token import TokenBasedPlagiarismStrategy
+        from app.services.strategies.plagiarism_ast import ASTPlagiarismStrategy
+        from app.services.strategies.ai_probability import AIProbabilityStrategy
+
         with app.app_context():
             submission = Submission.query.get(submission_id)
             code = submission.code
@@ -58,38 +57,44 @@ def run_evaluation_pipeline(app, submission_id: int):
 
             other_submissions = Submission.query.filter(
                 Submission.assignment_id == submission.assignment_id,
-                Submission.id != submission.id,
-                Submission.status == 'completed'
+                Submission.id != submission.id
             ).all()
-            
-            all_submissions_code = [s.code for s in other_submissions]
+            other_codes = [s.code for s in other_submissions]
 
             token_strategy = TokenBasedPlagiarismStrategy()
             ast_strategy = ASTPlagiarismStrategy()
             ai_strategy = AIProbabilityStrategy()
 
-            # Calculate overall scores
-            plagiarism_token_score = token_strategy.analyze(code, all_submissions_code, language)
-            plagiarism_ast_score = ast_strategy.analyze(code, all_submissions_code, language)
-            
-            submission.plagiarism_score = max(plagiarism_token_score, plagiarism_ast_score)
-            submission.ai_probability = ai_strategy.analyze(code, all_submissions_code, language)
-            
-            # Create PlagiarismPair records
-            for other_sub in other_submissions:
-                pair_token_score = token_strategy.analyze(code, [other_sub.code], language)
-                pair_ast_score = ast_strategy.analyze(code, [other_sub.code], language)
-                
-                if pair_token_score >= 0.8 or pair_ast_score == 1.0:
-                    pair = PlagiarismPair(
+            token_score = token_strategy.analyze(code, other_codes, language=language)
+            ast_score = ast_strategy.analyze(code, other_codes, language=language)
+            ai_score = ai_strategy.analyze(code, other_codes, language=language)
+
+            plagiarism_score = max(token_score or 0.0, ast_score or 0.0)
+
+            submission.plagiarism_score = plagiarism_score
+            submission.score_structural = ast_score or 0.0
+            submission.ai_probability = ai_score or 0.0
+
+            # Store pair records for high-similarity cases.
+            # Token strategy currently returns max score only, so pair-level details are approximated
+            # by recording pairs against all existing submissions when the max score crosses threshold.
+            if plagiarism_score >= 0.8:
+                for other in other_submissions:
+                    exists = PlagiarismPair.query.filter_by(
                         assignment_id=submission.assignment_id,
-                        submission_a_id=submission.id,
-                        submission_b_id=other_sub.id,
-                        similarity_score=max(pair_token_score, pair_ast_score),
-                        method="AST" if pair_ast_score == 1.0 else "Token"
-                    )
-                    db.session.add(pair)
-            
+                        submission_a_id=other.id,
+                        submission_b_id=submission.id,
+                        method='combined'
+                    ).first()
+                    if not exists:
+                        db.session.add(PlagiarismPair(
+                            assignment_id=submission.assignment_id,
+                            submission_a_id=other.id,
+                            submission_b_id=submission.id,
+                            similarity_score=plagiarism_score,
+                            method='combined'
+                        ))
+
             db.session.commit()
 
         # Step 3: Grade

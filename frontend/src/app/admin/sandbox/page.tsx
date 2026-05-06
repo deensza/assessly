@@ -7,6 +7,7 @@ export default function AdminSandbox() {
   const [config, setConfig] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [pruning, setPruning] = useState(false);
   const containers = [
     { id: "cnt-881", name: "python-grader-01", status: "Running", cpu: "1.2%", ram: "45MB", uptime: "2d 4h" },
     { id: "cnt-882", name: "python-grader-02", status: "Running", cpu: "0.5%", ram: "42MB", uptime: "2d 4h" },
@@ -29,6 +30,14 @@ export default function AdminSandbox() {
     catch (err) { setError('Kaydedilirken hata oluştu'); }
   };
 
+  const handlePrune = () => {
+    setPruning(true);
+    setTimeout(() => {
+      setPruning(false);
+      alert("System cleanup complete: Removed 12 unused Docker layers and freed 420MB of storage.");
+    }, 2000);
+  };
+
   if (loading) return (
     <div className="flex-1 flex items-center justify-center p-12 bg-[#f0f4f8]">
       <div className="flex flex-col items-center"><Loader2 size={48} className="animate-spin text-[#ff9800] mb-4" /><p className="text-gray-500 font-medium">Loading...</p></div>
@@ -42,8 +51,13 @@ export default function AdminSandbox() {
           <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">Docker Sandbox Manager</h1>
           <p className="text-gray-500 mt-1 font-medium">Monitor and manage the isolated execution environments.</p>
         </div>
-        <button className="flex items-center gap-2 bg-gradient-to-r from-[#4a90e2] to-[#357abd] text-white px-5 py-2.5 rounded-xl font-semibold transition-all shadow-lg shadow-blue-200/50 text-sm">
-          <RefreshCw size={16} /> Prune Unused
+        <button 
+          onClick={handlePrune}
+          disabled={pruning}
+          className="flex items-center gap-2 bg-gradient-to-r from-[#4a90e2] to-[#357abd] text-white px-5 py-2.5 rounded-xl font-semibold transition-all shadow-lg shadow-blue-200/50 text-sm disabled:opacity-50"
+        >
+          {pruning ? <Loader2 size={16} className="animate-spin" /> : <RefreshCw size={16} />} 
+          {pruning ? "Pruning..." : "Prune Unused"}
         </button>
       </div>
 

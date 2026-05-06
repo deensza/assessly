@@ -56,9 +56,8 @@ class GraderService:
             # 1. Correctness (from evaluator)
             correctness = correctness_score
 
-            # 2. Structural/Efficiency (Lab 6 strategy - Ported as efficiency/structural)
-            structural = submission.score_structural or 0.0
-            efficiency = structural * 100 # Using structural as efficiency base
+            # 2. Efficiency (Based on execution time from TestResults)
+            efficiency = self._calculate_efficiency(submission)
 
             # 3. Plagiarism score (0.0-1.0)
             plagiarism = submission.plagiarism_score or 0.0
@@ -88,6 +87,23 @@ class GraderService:
             submission.flagged = flagged
             submission.status = SubmissionStatus.completed
             db.session.commit()
+
+            # --- Auto-sync to Moodle if enabled ---
+            try:
+                from app.routes.admin import _moodle_config
+                from app.services.moodle import create_moodle_service
+                if _moodle_config.get('enabled') and _moodle_config.get('api_url') and _moodle_config.get('token'):
+                    svc = create_moodle_service(_moodle_config['api_url'], _moodle_config['token'])
+                    # Using internal IDs assuming they map 1:1 in this prototype context
+                    svc.push_grade(
+                        assignment_id=assignment.id,
+                        user_id=submission.student_id,
+                        grade=final_score,
+                        feedback="Autograded by Assessly"
+                    )
+                    logger.info(f"Auto-synced grade for submission {submission_id} to Moodle.")
+            except Exception as me:
+                logger.error(f"Auto-sync to Moodle failed: {me}")
 
             breakdown = {
                 'correctness': {
