@@ -17,6 +17,6 @@ COPY . .
 # Initialize database
 RUN python init_db.py || true
 
-EXPOSE 5000
+EXPOSE 8000
 
-CMD ["python", "run.py"]
+CMD ["gunicorn", "--bind", "0.0.0.0:8000", "--workers", "2", "--timeout", "120", "run:app"]

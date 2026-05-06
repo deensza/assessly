@@ -87,7 +87,7 @@ export function setStoredUser(user: User): void {
 }
 
 // === Axios Instance ===
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'https://assessly-api.azurewebsites.net/api';
 
 const api: AxiosInstance = axios.create({
   baseURL: API_BASE,
