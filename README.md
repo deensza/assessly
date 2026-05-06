@@ -1,6 +1,17 @@
 # Assessly — Automated Programming Assignment Evaluation System
 
-**Live Demo:** [https://deensza.github.io/assessly/](https://deensza.github.io/assessly/)
+## Deployment
+- **Frontend (Vercel):**  
+  https://assessly-34dx1i45f-deniz-s-projects1.vercel.app/instructor
+
+- **Backend (Azure):**  
+  The Flask backend API is deployed on Microsoft Azure App Service.
+
+Note:
+The backend handles authentication, assignment management, and submission evaluation APIs.  
+The frontend communicates with the Azure-hosted API via REST endpoints.
+
+The Docker-based sandbox execution environment is not deployed in the cloud and runs locally via docker-compose due to resource constraints and security isolation requirements.
 
 ## Project Overview
 
