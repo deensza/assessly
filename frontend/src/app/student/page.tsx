@@ -451,7 +451,7 @@ export default function StudentPortal() {
             <div className="col-span-full py-20 text-center">
               <div className="flex flex-col items-center gap-4">
                 <Search size={48} className="text-gray-200" />
-                <p className="text-gray-500 font-medium text-lg">No assignments found matching "{studentSearchQuery}"</p>
+                <p className="text-gray-500 font-medium text-lg">No assignments found matching &quot;{studentSearchQuery}&quot;</p>
                 <button 
                   onClick={() => setStudentSearchQuery("")}
                   className="text-[#4a90e2] font-bold hover:underline"
